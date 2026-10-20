@@ -866,7 +866,7 @@ extension NotchAgentStrings {
         valueNote: "La valeur API est ce que le même travail coûterait aux tarifs publics de l’API. Les forfaits facturent un prix fixe.",
         resetsCard: "Réinitialisations",
         useReset: "En utiliser une",
-        resetConfirm: "Utiliser une réinitialisation maintenant ?",
+        resetConfirm: "Utiliser une réinitialisation maintenant\u{00A0}?",
         confirmReset: "Réinitialiser",
         resetting: "Réinitialisation…",
         resetDone: "Limites réinitialisées",
