@@ -9,7 +9,9 @@ abaixo no Firefox. A implementação nativa ainda não faz parte deste estudo.
 Refinamento confirmado: retirar a expansão de consumo/histórico do fim da lista;
 mostrar o tempo até a renovação da sessão junto ao percentual livre de cada
 provedor; usar um botão de ícone de medidor no rodapé para abrir limites e uso,
-com tooltip e nome acessível. Uso/histórico continuam acessíveis nesse detalhe.
+com tooltip e nome acessível. Refinamento seguinte: percentual e renovação na
+mesma linha, apenas ↻ e o tempo, sem texto adicional; ícone de limites e uso
+sem fundo ou borda. Uso/histórico continuam acessíveis nesse detalhe.
 
 ## Rodar
 
