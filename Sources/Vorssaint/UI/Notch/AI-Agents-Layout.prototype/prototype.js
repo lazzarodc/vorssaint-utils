@@ -75,7 +75,7 @@ function VariantC() {
   return `${alert()}<div class="workspace"><div class="scroll session-rail"><h3>${state.sessions.length} sessões</h3>${sessions().map(x=>`<button class="rail-session ${x.pending?'pending':''}" aria-pressed="${s?.id===x.id}" data-action="select" data-id="${x.id}"><span class="row">${mark(x)}<span class="sub">${x.provider}</span>${dot(x)}</span><strong>${escapeHTML(x.topic)}</strong><span class="sub">${escapeHTML(x.project)}</span><span class="sub">${x.pending?'Precisa de você':statusText(x)}</span></button>`).join('')}</div><div class="scroll workspace-detail">${s?conversation(s,true):empty()}</div></div>${footer()}`;
 }
 function showState() {
-  const snapshot={alternativa:state.variant,cenario:state.scenario,largura:state.width,alturaConteudo:320,area:state.area,detalhe:state.detail,selecionada:state.selected,periodo:state.period,pendencias:pending(),sessoes:state.sessions,limites:{claudeLivre:98,codexLivre:codexRemaining(),resets:3},ultimaAcao:state.notice||null,persistencia:false,dados:'fictícios'};
+  const snapshot={alternativa:state.variant,cenario:state.scenario,largura:state.width,alturaConteudo:state.variant==='A'&&state.area==='sessions'&&!state.detail?'adaptativa':320,alturaConteudoMaxima:320,area:state.area,detalhe:state.detail,selecionada:state.selected,periodo:state.period,pendencias:pending(),sessoes:state.sessions,limites:{claudeLivre:98,codexLivre:codexRemaining(),resets:3},ultimaAcao:state.notice||null,persistencia:false,dados:'fictícios'};
   $('#state').textContent=JSON.stringify(snapshot,null,2);
   // Full state is also surfaced on every variant switch for inspection.
   console.info('AI Agents prototype state',snapshot);
@@ -88,7 +88,9 @@ function render() {
   $('#switch-label').textContent=`${state.variant} · ${v.name}`;
   $('#band-count').textContent=pending()?`${pending()} pendente`:`${state.sessions.length} sessões`;
   $('#island-wrap').style.setProperty('--island-width',`${state.width}px`);
-  $('#dimension-label').textContent=`${state.width} px solicitados · conteúdo de 320 px${innerWidth<700?' · ajustado à tela':''}`;
+  const adaptive=state.variant==='A'&&state.area==='sessions'&&!state.detail;
+  $('#surface').dataset.adaptive=String(adaptive);
+  $('#dimension-label').textContent=`${state.width} px solicitados · ${adaptive?'altura adaptativa até 320 px':'conteúdo de 320 px'}${innerWidth<700?' · ajustado à tela':''}`;
   const detail=state.sessions.find(s=>s.id===state.detail);
   $('#surface').innerHTML=state.area==='capacity'?capacity():detail?`<div class="scroll" style="flex:1">${conversation(detail)}</div>`:({A:VariantA,B:VariantB,C:VariantC}[state.variant])();
   $('#surface').querySelectorAll('details').forEach(d=>{d.open=opened.has(d.querySelector('summary').textContent);});

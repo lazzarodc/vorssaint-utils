@@ -14,6 +14,9 @@ mesma linha, apenas ↻ e o tempo, sem texto adicional; ícone de limites e uso
 sem fundo ou borda. Uso/histórico continuam acessíveis nesse detalhe.
 O rodapé foi compactado: espaçamento superior de 4 px, intervalos menores entre
 leituras e alvo do ícone de 24 px, mantendo a tipografia.
+Altura confirmada: a lista principal de A se ajusta ao conteúdo até 320 px,
+com rolagem apenas nas sessões ao atingir esse limite e rodapé sempre visível.
+Detalhes e consulta de uso mantêm o orçamento de 320 px para leitura.
 
 ## Rodar
 
