@@ -7,6 +7,11 @@
 .surface[data-adaptive="true"]{block-size:auto;max-block-size:320px}
 .surface[data-adaptive="true"] .queue-list{flex:0 1 auto}
 .surface[data-adaptive="true"] .queue-heading{flex-shrink:0}
+.queue-list{position:relative}
+.inline-session-detail{inline-size:100%;padding:11px;border:1px solid #455169;border-radius:12px;background:#171b23;margin-block-end:8px}
+.inline-detail-heading{margin-block-end:5px}
+.inline-session-detail .conversation{margin-block:10px}
+.inline-session-detail .reply{margin-block:10px}
 .limit-footer.with-renewals{flex-wrap:nowrap;gap:6px;align-items:center;padding-block-start:4px;margin-block-start:4px}
 .with-renewals .limits-inline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex:1;min-inline-size:0}
 .limit-summary{display:flex;align-items:center;flex-wrap:wrap;column-gap:5px;row-gap:2px;font-size:10px}.limit-summary>span{white-space:nowrap}

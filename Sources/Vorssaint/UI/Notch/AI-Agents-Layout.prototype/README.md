@@ -17,6 +17,12 @@ leituras e alvo do ícone de 24 px, mantendo a tipografia.
 Altura confirmada: a lista principal de A se ajusta ao conteúdo até 320 px,
 com rolagem apenas nas sessões ao atingir esse limite e rodapé sempre visível.
 Detalhes e consulta de uso mantêm o orçamento de 320 px para leitura.
+Experimento seguinte: em A, o botão da sessão expande sua conversa no próprio
+card, com toda a largura disponível, em vez de navegar para outra tela. Apenas
+uma sessão se expande por vez; o botão superior recolhe. A ilha cresce até o
+limite e a lista rola, preservando as demais sessões e o rodapé. O campo de
+resposta e as permissões continuam dentro do conteúdo expandido. B/C mantêm suas
+estruturas para comparação. Esta interação ainda precisa do retorno do usuário.
 
 ## Rodar
 

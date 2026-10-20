@@ -7,7 +7,7 @@ const variants = {
   C: {name:'Lista + conversa', description:'Uma lista estreita mantém as sessões à vista; o painel ao lado mostra apenas a conversa selecionada. Limites e acesso ao uso ficam na base.', gain:'Trocar de conversa não exige voltar de uma tela de detalhe. Favorece várias sessões simultâneas.', tradeoff:'Divide a largura da ilha. Com 480 px, mensagens e ações ficam mais apertadas.'}
 };
 const param = new URLSearchParams(location.search);
-const state = {variant: variants[param.get('variant')] ? param.get('variant') : 'A', scenario:'attention', width:560, area:'sessions', detail:null, selected:'claude-1', period:'Hoje', capacity:'limits', notice:'', sessions:[]};
+const state = {variant: variants[param.get('variant')] ? param.get('variant') : 'A', scenario:'attention', width:560, area:'sessions', detail:null, expanded:null, selected:'claude-1', period:'Hoje', capacity:'limits', notice:'', sessions:[]};
 function fixture(scenario) {
   const sessions = [
     {id:'claude-1',provider:'Claude',project:'vorssaint-utils',topic:'Integração de sessões',model:'Sonnet',terminal:'iTerm',status:'waiting',pending:true,activity:'Precisa executar os testes',elapsed:'12 min',branch:'feat/agents'},
@@ -64,7 +64,10 @@ function conversation(s, workspace=false) {
   <div class="row between" style="margin-top:10px"><span class="sub">${s.model} · ${s.branch}</span>${button('Abrir terminal','terminal',`data-id="${s.id}"`,'text-btn')}</div>`;
 }
 function VariantA() {
-  return `<div class="queue-heading"><h3>${pending()?'Precisa de você':'Suas sessões'}</h3><span>${state.sessions.length} abertas</span></div>${alert()}<div class="scroll queue-list">${state.sessions.length?sessions().map(s=>s.pending?approval(s):sessionLine(s)).join(''):empty()}</div>${footer(true)}`;
+  return `<div class="queue-heading"><h3>${pending()?'Precisa de você':'Suas sessões'}</h3><span>${state.sessions.length} abertas</span></div>${alert()}<div class="scroll queue-list">${state.sessions.length?sessions().map(s=>s.id===state.expanded?inlineSessionDetail(s):s.pending?approval(s):sessionLine(s)).join(''):empty()}</div>${footer(true)}`;
+}
+function inlineSessionDetail(s) {
+  return `<article class="inline-session-detail" id="session-details-${s.id}"><div class="row between inline-detail-heading"><span class="sub">Conversa</span>${button('⌃','detail',`data-id="${s.id}" aria-label="Recolher ${escapeHTML(s.topic)}" aria-expanded="true" aria-controls="session-details-${s.id}"`,'chevron')}</div>${conversation(s,true)}</article>`;
 }
 function VariantB() {
   const tabbar=`<div class="mode-tabs" aria-label="Áreas de AI Agents">${button(`Sessões${pending()?' · '+pending()+' pendente':''}`,'area',`data-area="sessions" aria-pressed="${state.area==='sessions'}"`)}${button('Uso','area',`data-area="usage" aria-pressed="${state.area==='usage'}"`)}</div>`;
@@ -76,6 +79,7 @@ function VariantC() {
 }
 function showState() {
   const snapshot={alternativa:state.variant,cenario:state.scenario,largura:state.width,alturaConteudo:state.variant==='A'&&state.area==='sessions'&&!state.detail?'adaptativa':320,alturaConteudoMaxima:320,area:state.area,detalhe:state.detail,selecionada:state.selected,periodo:state.period,pendencias:pending(),sessoes:state.sessions,limites:{claudeLivre:98,codexLivre:codexRemaining(),resets:3},ultimaAcao:state.notice||null,persistencia:false,dados:'fictícios'};
+  snapshot.sessaoExpandida=state.expanded;
   $('#state').textContent=JSON.stringify(snapshot,null,2);
   // Full state is also surfaced on every variant switch for inspection.
   console.info('AI Agents prototype state',snapshot);
@@ -98,12 +102,12 @@ function render() {
   showState();
 }
 function switchVariant(delta) {
-  const keys=Object.keys(variants);state.variant=keys[(keys.indexOf(state.variant)+delta+keys.length)%keys.length];state.area='sessions';state.detail=null;
+  const keys=Object.keys(variants);state.variant=keys[(keys.indexOf(state.variant)+delta+keys.length)%keys.length];state.area='sessions';state.detail=null;state.expanded=null;
   const url=new URL(location.href);url.searchParams.set('variant',state.variant);history.replaceState(null,'',url);render();
 }
 $('#previous').onclick=()=>switchVariant(-1); $('#next').onclick=()=>switchVariant(1);
 document.addEventListener('keydown',e=>{if(e.target.closest('input,textarea,select,[contenteditable]'))return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();switchVariant(e.key==='ArrowLeft'?-1:1);}});
-function resetScenario() {state.sessions=fixture(state.scenario);state.area='sessions';state.detail=null;state.selected=state.sessions[0]?.id??null;state.notice='Cenário reiniciado. Todas as ações são simuladas.';render();}
+function resetScenario() {state.sessions=fixture(state.scenario);state.area='sessions';state.detail=null;state.expanded=null;state.selected=state.sessions[0]?.id??null;state.notice='Cenário reiniciado. Todas as ações são simuladas.';render();}
 $('#scenario').onchange=e=>{state.scenario=e.target.value;resetScenario();};$('#width').onchange=e=>{state.width=Number(e.target.value);render();};$('#reset').onclick=resetScenario;
 $('#surface').addEventListener('change',e=>{if(e.target.dataset.control==='period'){state.period=e.target.value;render();}});
 $('#surface').addEventListener('click',e=>{
@@ -111,7 +115,7 @@ $('#surface').addEventListener('click',e=>{
   const {action,id}=target.dataset;
   const s=state.sessions.find(x=>x.id===id);
   if(action==='approve'||action==='deny') {Object.assign(s,{pending:false,status:action==='approve'?'working':'waiting',activity:action==='approve'?'Executando os testes de AI Agents':'Permissão negada; aguardando orientação'});state.notice=action==='approve'?'Simulação: Claude recebeu permissão uma vez. Nenhum comando foi executado.':'Simulação: permissão negada. Nenhuma tecla foi enviada ao terminal.';}
-  if(action==='detail'){state.detail=id;state.selected=id;}
+  if(action==='detail'){if(state.variant==='A'){state.expanded=state.expanded===id?null:id;}else{state.detail=id;}state.selected=id;}
   if(action==='select'){state.selected=id;}
   if(action==='back'){state.area='sessions';state.detail=null;}
   if(action==='area'){state.area=target.dataset.area;state.detail=null;}
@@ -120,6 +124,7 @@ $('#surface').addEventListener('click',e=>{
   if(action==='reset-limit'){state.notice='Simulação de renovação selecionada. Nenhum reset real foi consumido.';}
   if(action==='terminal'){state.notice=`Simulação: abriria o terminal de “${s.topic}”. Nenhum aplicativo foi acionado.`;}
   render();
+  if(action==='detail'&&state.variant==='A'&&state.expanded){const panel=document.getElementById(`session-details-${state.expanded}`);const list=$('.queue-list');list.scrollTop=panel.offsetTop;}
 });
 $('#surface').addEventListener('submit',e=>{e.preventDefault();const input=e.target.querySelector('input');const s=state.sessions.find(x=>x.id===e.target.dataset.id);if(!input.value.trim()||!s)return;Object.assign(s,{status:'working',activity:'Respondendo à mensagem simulada'});state.notice=`Simulação: mensagem para ${s.provider} em “${s.topic}”. Não foi enviada a nenhum serviço.`;render();});
 // Local preview only. These files are never referenced by the native build.
