@@ -43,6 +43,21 @@ its fictitious account/session data is not used by the native app. Claude/Codex
 marks are copied from the MIT reference assets under `Resources/Images`, with
 attribution in `Resources/AgentsIsland-LICENSE.txt`.
 
+Implementation validation (2026-10-20): the full suite passed 113,143 host checks,
+all 12 standalone session suites and the preference/uninstall/developer-isolation
+checks. Review then caught a footer fallback that could present a weekly window
+as a session allowance. Two regression checks failed before the correction;
+the corrected agents suite passed all 891 checks, also covering model-scoped
+windows, multiple accounts, absent readings and preserved observation dates.
+Both standards and spec review were rechecked with no remaining findings.
+The revised Developer build and self-test passed on macOS 27.0.1, Apple Silicon.
+The native overview was opened and its session rows, status indicators and footer
+were observed through accessibility. Further Computer Use reads timed out; a
+process sample showed the main thread servicing its normal event loop rather
+than a blocked layout. End-to-end visual verification of the new panels and
+terminal input remains partial; no real user session was sent a message or
+permission response during this layout validation.
+
 ## Claude hook
 
 Installation and removal are explicit actions in Dynamic Island → AI Agents

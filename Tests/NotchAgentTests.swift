@@ -16,6 +16,28 @@ enum NotchAgentTests {
                          && NotchAgentStrings.panelTranslations[language]?.allSatisfy { !$0.isEmpty } == true,
                          "session-first navigation is localized in \(language.rawValue)")
         }
+        let summaryNow = Date(timeIntervalSince1970: 1_700_000_000)
+        let sessionOnly = AgentLimitWindow(id: "session", kind: .session, minutes: 300, scope: nil,
+            usedPercent: 20, resetsAt: summaryNow.addingTimeInterval(3600))
+        let weeklyOnly = AgentLimitWindow(id: "weekly", kind: .weekly, minutes: 10080, scope: nil,
+            usedPercent: 95, resetsAt: summaryNow.addingTimeInterval(86400))
+        let oldReading = AgentLimits(provider: .codex, windows: [sessionOnly],
+            observedAt: summaryNow.addingTimeInterval(-1800), source: .account)
+        let weeklyReading = AgentLimits(provider: .codex, windows: [weeklyOnly], observedAt: summaryNow, source: .account)
+        suite.expect(NotchAgentSupport.sessionSummary([.init(name: "Weekly", limits: weeklyReading)], now: summaryNow) == nil,
+                     "footer does not label a weekly-only reading as a session allowance")
+        let picked = NotchAgentSupport.sessionSummary([.init(name: "Unknown", limits: nil),
+            .init(name: "Session", limits: oldReading), .init(name: "Weekly", limits: weeklyReading)], now: summaryNow)
+        suite.expect(picked?.name == "Session" && picked?.window.usedPercent == 20 && picked?.limits.observedAt == oldReading.observedAt,
+                     "footer chooses actual session data across accounts and retains its stale timestamp")
+        let busySession = AgentLimitWindow(id: "busy", kind: .session, minutes: 300, scope: nil,
+            usedPercent: 75, resetsAt: summaryNow.addingTimeInterval(7200))
+        let modelSession = AgentLimitWindow(id: "model", kind: .session, minutes: 300, scope: "Model",
+            usedPercent: 99, resetsAt: summaryNow.addingTimeInterval(7200))
+        let busiest = NotchAgentSupport.sessionSummary([.init(name: "Session", limits: oldReading),
+            .init(name: "Busy", limits: AgentLimits(provider: .codex, windows: [modelSession, busySession], observedAt: summaryNow, source: .account))], now: summaryNow)
+        suite.expect(busiest?.name == "Busy" && busiest?.window.id == "busy",
+                     "footer selects the most constrained account-wide session, not a model-specific window")
         let layout = NotchAgentSupport.rowsAroundSessions(cards: [.spend, .live, .limits],
                                                          providers: [.codex, .copilot], codexAccounts: [], width: 500)
         suite.expect(layout.before.flatMap { $0 }.map(\.card) == [.spend]

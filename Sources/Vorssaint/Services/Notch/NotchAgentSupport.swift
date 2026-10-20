@@ -63,7 +63,28 @@ struct NotchAgentTile: Identifiable, Equatable {
     var id: String { card.rawValue + (provider.map { "." + $0.rawValue } ?? "") + (accountID.map { "." + $0 } ?? "") }
 }
 
+struct NotchAgentLimitReading {
+    let name: String
+    let limits: AgentLimits?
+}
+
+struct NotchAgentSessionLimit {
+    let name: String
+    let limits: AgentLimits
+    let window: AgentLimitWindow
+}
+
 enum NotchAgentSupport {
+    /// The most constrained reported session across the accounts shown in Limits.
+    static func sessionSummary(_ readings: [NotchAgentLimitReading], now: Date) -> NotchAgentSessionLimit? {
+        readings.compactMap { reading -> NotchAgentSessionLimit? in
+            guard let limits = reading.limits,
+                  let reported = limits.windows.first(where: { $0.kind == .session && $0.scope == nil }) else { return nil }
+            let window = AgentLimitSupport.current(reported, at: now)
+            return NotchAgentSessionLimit(name: reading.name, limits: limits, window: window)
+        }.max { $0.window.usedPercent < $1.window.usedPercent }
+    }
+
     static let defaultFinishMinimum: TimeInterval = 60
     static let finishMinimums: [TimeInterval] = [0, 30, 60, 120, 300]
     static let defaultLimitThreshold = 80.0

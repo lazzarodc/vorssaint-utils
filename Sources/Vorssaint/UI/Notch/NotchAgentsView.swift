@@ -151,20 +151,18 @@ struct NotchAgentsView: View {
         }
         .font(.system(size: 10)).padding(.top, 6)
         .overlay(alignment: .top) { Divider() }
+        .accessibilityElement(children: .contain)
     }
 
     private func summary(_ provider: AgentProvider, now: Date) -> some View {
-        let readings: [(String, AgentLimits?)] = provider == .codex && !codexAccounts.isEmpty
-            ? codexAccounts.map { ($0.profile.name, $0.currentLimits(at: now)) }
-            : [(provider.displayName, usage.snapshot.limits[provider])]
-        let windows = readings.compactMap { name, limits -> (String, AgentLimits, AgentLimitWindow)? in
-            guard let limits, let window = NotchAgentSupport.focusedLimit(limits, focus: .session, now: now) else { return nil }
-            return (name, limits, window)
-        }
-        let selected = windows.max { $0.2.usedPercent < $1.2.usedPercent }
+        let readings: [NotchAgentLimitReading] = provider == .codex && !codexAccounts.isEmpty
+            ? codexAccounts.map { .init(name: $0.profile.name, limits: $0.currentLimits(at: now)) }
+            : [.init(name: provider.displayName, limits: usage.snapshot.limits[provider])]
+        let selected = NotchAgentSupport.sessionSummary(readings, now: now)
         return HStack(spacing: 5) {
             NotchAgentMark(provider: provider, size: 13).frame(width: 17, height: 17)
-            if let (_, _, window) = selected {
+            if let selected {
+                let window = selected.window
                 Text(display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent(window.usedFraction)) : text.left(AgentFormat.percent(window.remainingFraction)))
                     .foregroundStyle(agentLimitTint(provider, usedFraction: window.usedFraction))
                 if let reset = AgentLimitSupport.displayedReset(window, now: now) {
@@ -175,11 +173,11 @@ struct NotchAgentsView: View {
             } else { Text("—").foregroundStyle(.secondary) }
         }
         .lineLimit(1).minimumScaleFactor(0.8).monospacedDigit()
-        .opacity(selected.map { NotchAgentSupport.limitsAreStale($0.1, provider: provider, account: provider == .codex && !codexAccounts.isEmpty, now: now) ? 0.6 : 1 } ?? 1)
-        .help(provider.displayName + (selected.map { " · " + $0.0 + " · " + text.updated($0.1.observedAt.formatted(.relative(presentation: .named))) } ?? ""))
+        .opacity(selected.map { NotchAgentSupport.limitsAreStale($0.limits, provider: provider, account: provider == .codex && !codexAccounts.isEmpty, now: now) ? 0.6 : 1 } ?? 1)
+        .help(provider.displayName + (selected.map { " · " + $0.name + " · " + text.updated($0.limits.observedAt.formatted(.relative(presentation: .named).locale(l10n.language.formattingLocale()))) } ?? ""))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(provider.displayName + (selected.map { " · " + $0.0 } ?? ""))
-        .accessibilityValue(selected.map { display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent($0.2.usedFraction)) : text.left(AgentFormat.percent($0.2.remainingFraction)) } ?? text.waitingForLimits)
+        .accessibilityLabel(provider.displayName + (selected.map { " · " + $0.name } ?? ""))
+        .accessibilityValue(selected.map { display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent($0.window.usedFraction)) : text.left(AgentFormat.percent($0.window.remainingFraction)) } ?? text.waitingForLimits)
     }
 
     private func panel(now: Date) -> some View {
@@ -352,7 +350,6 @@ private struct NotchAgentLimitsCard: View {
                                 .accessibilityLabel(account.checkLabel)
                             }
                         } else {
-                            if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
                             if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
                         }
                     }
