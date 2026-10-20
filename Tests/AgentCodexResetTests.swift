@@ -41,6 +41,11 @@ enum AgentCodexResetTests {
                         && summary?.nextExpiry == Date(timeIntervalSince1970: 1_791_173_960),
                      "resets list soonest to expire first, without used or expired ones, beside the account's count")
         let windows = summary?.limits?.windows
+        suite.expect(summary?.resets.last?.resetType == "codexRateLimits"
+                        && summary?.resets.last?.title == "Full reset"
+                        && summary?.resets.last?.description == "One free reset."
+                        && summary?.resets.first?.title == nil && summary?.resets.first?.description == nil,
+                     "reset metadata stays attached after expiry sorting, with absent optional text left unknown")
         suite.expect(summary?.limits?.source == .account && summary?.limits?.observedAt == now
                         && windows?.map(\.id) == ["codex.300", "codex.10080"] && windows?.map(\.kind) == [.session, .weekly]
                         && windows?.last?.usedPercent == 89

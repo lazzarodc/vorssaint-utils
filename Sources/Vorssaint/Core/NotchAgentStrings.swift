@@ -272,7 +272,7 @@ extension NotchAgentStrings {
         valueNote: "API value is what the same work would cost at API list prices. Plans charge a fixed price instead.",
         resetsCard: "Resets",
         useReset: "Use a reset",
-        resetConfirm: "Reset the session and weekly limits now?",
+        resetConfirm: "Use one reset now?",
         confirmReset: "Reset",
         resetting: "Resetting…",
         resetDone: "Limits reset",
@@ -285,7 +285,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Sign in to Codex with a plan to see resets",
         resetsUpdate: "Update Codex to use resets here",
         resetsCheckFailed: "Couldn’t check resets",
-        resetsHelp: "A reset renews the Codex session and weekly limits at once. Codex checks your resets with its own sign-in, which Vorssaint never reads.")
+        resetsHelp: "Codex determines which eligible usage limits are renewed when a reset is used.")
 
     static let uk = NotchAgentStrings(
         title: "ШІ-агенти",
@@ -371,7 +371,7 @@ extension NotchAgentStrings {
         valueNote: "Вартість API показує, скільки така сама робота коштувала б за цінами API. Плани натомість мають фіксовану ціну.",
         resetsCard: "Скидання",
         useReset: "Використати скидання",
-        resetConfirm: "Скинути ліміти сеансу й тижня зараз?",
+        resetConfirm: "Використати одне скидання зараз?",
         confirmReset: "Скинути",
         resetting: "Скидання…",
         resetDone: "Ліміти скинуто",
@@ -384,7 +384,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Увійдіть у Codex із планом, щоб бачити скидання",
         resetsUpdate: "Оновіть Codex, щоб використовувати скидання тут",
         resetsCheckFailed: "Не вдалося перевірити скидання",
-        resetsHelp: "Скидання одразу поновлює ліміти сеансу й тижня Codex. Codex перевіряє ваші скидання через власний вхід, який Vorssaint ніколи не читає.")
+        resetsHelp: "Codex визначає, які доступні ліміти використання поновлюються під час скидання.")
 
     static let ptBR = NotchAgentStrings(
         title: "Agentes de IA",
@@ -470,7 +470,7 @@ extension NotchAgentStrings {
         valueNote: "Valor de API é quanto o mesmo trabalho custaria pelos preços de tabela da API. Os planos cobram um preço fixo.",
         resetsCard: "Redefinições",
         useReset: "Usar uma redefinição",
-        resetConfirm: "Redefinir agora os limites da sessão e da semana?",
+        resetConfirm: "Usar uma redefinição agora?",
         confirmReset: "Redefinir",
         resetting: "Redefinindo…",
         resetDone: "Limites redefinidos",
@@ -483,7 +483,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Entre no Codex com um plano para ver as redefinições",
         resetsUpdate: "Atualize o Codex para usar as redefinições aqui",
         resetsCheckFailed: "Não foi possível verificar as redefinições",
-        resetsHelp: "Uma redefinição renova de uma vez os limites da sessão e da semana do Codex. O Codex verifica suas redefinições com o próprio login, que o Vorssaint nunca lê.")
+        resetsHelp: "O Codex determina quais limites de uso elegíveis são renovados ao usar uma redefinição.")
 
     static let es = NotchAgentStrings(
         title: "Agentes de IA",
@@ -569,7 +569,7 @@ extension NotchAgentStrings {
         valueNote: "El valor de API es lo que costaría el mismo trabajo con los precios de lista de la API. Los planes cobran un precio fijo.",
         resetsCard: "Reinicios",
         useReset: "Usar un reinicio",
-        resetConfirm: "¿Reiniciar ahora los límites de la sesión y de la semana?",
+        resetConfirm: "¿Usar un reinicio ahora?",
         confirmReset: "Reiniciar",
         resetting: "Reiniciando…",
         resetDone: "Límites reiniciados",
@@ -582,7 +582,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Inicia sesión en Codex con un plan para ver los reinicios",
         resetsUpdate: "Actualiza Codex para usar los reinicios aquí",
         resetsCheckFailed: "No se pudieron comprobar los reinicios",
-        resetsHelp: "Un reinicio renueva a la vez los límites de la sesión y de la semana de Codex. Codex comprueba tus reinicios con su propio inicio de sesión, que Vorssaint nunca lee.")
+        resetsHelp: "Codex determina qué límites de uso elegibles se renuevan al usar un reinicio.")
 
     static let sk = NotchAgentStrings(
         title: "AI agenti",
@@ -668,7 +668,7 @@ extension NotchAgentStrings {
         valueNote: "Hodnota API je suma, ktorú by tá istá práca stála v cenníkových cenách API. Plány si namiesto toho účtujú pevnú cenu.",
         resetsCard: "Obnovenia",
         useReset: "Použiť obnovenie",
-        resetConfirm: "Obnoviť teraz limity relácie a týždňa?",
+        resetConfirm: "Použiť teraz jedno obnovenie?",
         confirmReset: "Obnoviť",
         resetting: "Obnovuje sa…",
         resetDone: "Limity sa obnovili",
@@ -681,7 +681,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Prihláste sa do Codexu s plánom, aby ste videli obnovenia",
         resetsUpdate: "Aktualizujte Codex, aby ste tu mohli používať obnovenia",
         resetsCheckFailed: "Obnovenia sa nepodarilo skontrolovať",
-        resetsHelp: "Obnovenie naraz obnoví limity relácie aj týždňa v Codexe. Codex kontroluje vaše obnovenia vlastným prihlásením, ktoré Vorssaint nikdy nečíta.")
+        resetsHelp: "Codex určuje, ktoré oprávnené limity používania sa pri obnovení obnovia.")
 
     static let de = NotchAgentStrings(
         title: "KI-Agenten",
@@ -767,7 +767,7 @@ extension NotchAgentStrings {
         valueNote: "Der API-Wert ist, was dieselbe Arbeit zu API-Listenpreisen kosten würde. Pläne kosten stattdessen einen festen Preis.",
         resetsCard: "Zurücksetzungen",
         useReset: "Zurücksetzung nutzen",
-        resetConfirm: "Sitzungs- und Wochenlimit jetzt zurücksetzen?",
+        resetConfirm: "Jetzt eine Zurücksetzung verwenden?",
         confirmReset: "Zurücksetzen",
         resetting: "Wird zurückgesetzt…",
         resetDone: "Limits zurückgesetzt",
@@ -780,7 +780,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Melde dich in Codex mit einem Plan an, um Zurücksetzungen zu sehen",
         resetsUpdate: "Aktualisiere Codex, um Zurücksetzungen hier zu nutzen",
         resetsCheckFailed: "Zurücksetzungen konnten nicht geprüft werden",
-        resetsHelp: "Eine Zurücksetzung erneuert das Sitzungs- und das Wochenlimit von Codex auf einmal. Codex prüft deine Zurücksetzungen mit seiner eigenen Anmeldung, die Vorssaint nie liest.")
+        resetsHelp: "Codex bestimmt, welche berechtigten Nutzungslimits beim Zurücksetzen erneuert werden.")
 
     static let fr = NotchAgentStrings(
         title: "Agents IA",
@@ -866,7 +866,7 @@ extension NotchAgentStrings {
         valueNote: "La valeur API est ce que le même travail coûterait aux tarifs publics de l’API. Les forfaits facturent un prix fixe.",
         resetsCard: "Réinitialisations",
         useReset: "En utiliser une",
-        resetConfirm: "Réinitialiser maintenant les limites de la session et de la semaine\u{00A0}?",
+        resetConfirm: "Utiliser une réinitialisation maintenant ?",
         confirmReset: "Réinitialiser",
         resetting: "Réinitialisation…",
         resetDone: "Limites réinitialisées",
@@ -879,7 +879,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Connectez-vous à Codex avec un forfait pour voir les réinitialisations",
         resetsUpdate: "Mettez à jour Codex pour utiliser les réinitialisations ici",
         resetsCheckFailed: "Impossible de vérifier les réinitialisations",
-        resetsHelp: "Une réinitialisation renouvelle d’un coup les limites de la session et de la semaine de Codex. Codex vérifie vos réinitialisations avec sa propre connexion, que Vorssaint ne lit jamais.")
+        resetsHelp: "Codex détermine les limites d’utilisation admissibles renouvelées lors d’une réinitialisation.")
 
     static let it = NotchAgentStrings(
         title: "Agenti IA",
@@ -965,7 +965,7 @@ extension NotchAgentStrings {
         valueNote: "Il valore API è quanto costerebbe lo stesso lavoro ai prezzi di listino dell’API. I piani hanno invece un prezzo fisso.",
         resetsCard: "Ripristini",
         useReset: "Usa un ripristino",
-        resetConfirm: "Ripristinare ora i limiti della sessione e della settimana?",
+        resetConfirm: "Usare un ripristino ora?",
         confirmReset: "Ripristina",
         resetting: "Ripristino…",
         resetDone: "Limiti ripristinati",
@@ -978,7 +978,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Accedi a Codex con un piano per vedere i ripristini",
         resetsUpdate: "Aggiorna Codex per usare i ripristini qui",
         resetsCheckFailed: "Impossibile controllare i ripristini",
-        resetsHelp: "Un ripristino rinnova insieme i limiti della sessione e della settimana di Codex. Codex controlla i tuoi ripristini con il proprio accesso, che Vorssaint non legge mai.")
+        resetsHelp: "Codex determina quali limiti di utilizzo idonei vengono rinnovati usando un ripristino.")
 
     static let ru = NotchAgentStrings(
         title: "ИИ-агенты",
@@ -1064,7 +1064,7 @@ extension NotchAgentStrings {
         valueNote: "Стоимость по API показывает, сколько стоила бы та же работа по прейскуранту API. Тарифы же стоят фиксированную сумму.",
         resetsCard: "Сбросы",
         useReset: "Использовать сброс",
-        resetConfirm: "Сбросить лимиты сессии и недели сейчас?",
+        resetConfirm: "Использовать один сброс сейчас?",
         confirmReset: "Сбросить",
         resetting: "Сброс…",
         resetDone: "Лимиты сброшены",
@@ -1077,7 +1077,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Войдите в Codex с тарифом, чтобы видеть сбросы",
         resetsUpdate: "Обновите Codex, чтобы использовать сбросы здесь",
         resetsCheckFailed: "Не удалось проверить сбросы",
-        resetsHelp: "Сброс сразу обновляет лимиты сессии и недели Codex. Codex проверяет ваши сбросы через собственный вход, который Vorssaint никогда не читает.")
+        resetsHelp: "Codex определяет, какие подходящие лимиты использования обновляются при сбросе.")
 
     static let tr = NotchAgentStrings(
         title: "YZ Ajanları",
@@ -1163,7 +1163,7 @@ extension NotchAgentStrings {
         valueNote: "API değeri, aynı işin API liste fiyatlarıyla tutacağı tutardır. Planlar ise sabit bir ücret alır.",
         resetsCard: "Sıfırlamalar",
         useReset: "Sıfırlama kullan",
-        resetConfirm: "Oturum ve haftalık sınırlar şimdi sıfırlansın mı?",
+        resetConfirm: "Şimdi bir sıfırlama kullanılsın mı?",
         confirmReset: "Sıfırla",
         resetting: "Sıfırlanıyor…",
         resetDone: "Sınırlar sıfırlandı",
@@ -1176,7 +1176,7 @@ extension NotchAgentStrings {
         resetsSignIn: "Sıfırlamaları görmek için Codex’te bir planla oturum açın",
         resetsUpdate: "Sıfırlamaları burada kullanmak için Codex’i güncelleyin",
         resetsCheckFailed: "Sıfırlamalar denetlenemedi",
-        resetsHelp: "Bir sıfırlama, Codex’in oturum ve haftalık sınırlarını tek seferde yeniler. Codex sıfırlamalarınızı kendi oturum açma bilgisiyle denetler. Vorssaint bunu hiçbir zaman okumaz.")
+        resetsHelp: "Bir sıfırlama kullanıldığında hangi uygun kullanım sınırlarının yenileneceğini Codex belirler.")
 
     static let ja = NotchAgentStrings(
         title: "AIエージェント",
@@ -1262,7 +1262,7 @@ extension NotchAgentStrings {
         valueNote: "API換算額は、同じ作業をAPIの定価で行った場合の料金です。プランは定額です。",
         resetsCard: "リセット",
         useReset: "リセットを使う",
-        resetConfirm: "セッションと週の上限を今すぐリセットしますか？",
+        resetConfirm: "リセットを1回使用しますか？",
         confirmReset: "リセット",
         resetting: "リセット中…",
         resetDone: "上限をリセットしました",
@@ -1275,7 +1275,7 @@ extension NotchAgentStrings {
         resetsSignIn: "リセットを見るには、プランでCodexにサインインしてください",
         resetsUpdate: "ここでリセットを使うにはCodexをアップデートしてください",
         resetsCheckFailed: "リセットを確認できませんでした",
-        resetsHelp: "リセットを使うと、Codexのセッションと週の上限が同時に回復します。Codexは独自のサインイン情報でリセットを確認し、Vorssaintがそれを読み取ることはありません。")
+        resetsHelp: "リセット使用時に回復する対象の使用上限はCodexが決定します。")
 
     static let ko = NotchAgentStrings(
         title: "AI 에이전트",
@@ -1361,7 +1361,7 @@ extension NotchAgentStrings {
         valueNote: "API 환산 금액은 같은 작업을 API 정가로 계산한 비용입니다. 플랜은 정액 요금입니다.",
         resetsCard: "초기화",
         useReset: "초기화 사용",
-        resetConfirm: "세션 및 주간 한도를 지금 초기화할까요?",
+        resetConfirm: "초기화를 한 번 사용할까요?",
         confirmReset: "초기화",
         resetting: "초기화 중…",
         resetDone: "한도가 초기화됨",
@@ -1374,7 +1374,7 @@ extension NotchAgentStrings {
         resetsSignIn: "초기화를 보려면 플랜으로 Codex에 로그인하세요",
         resetsUpdate: "여기서 초기화를 사용하려면 Codex를 업데이트하세요",
         resetsCheckFailed: "초기화를 확인할 수 없습니다",
-        resetsHelp: "초기화를 사용하면 Codex의 세션 및 주간 한도가 한 번에 갱신됩니다. Codex는 자체 로그인으로 초기화를 확인하며, Vorssaint는 이를 읽지 않습니다.")
+        resetsHelp: "초기화 사용 시 갱신할 수 있는 사용 한도는 Codex가 결정합니다.")
 
     static let zhHans = NotchAgentStrings(
         title: "AI 智能体",
@@ -1460,7 +1460,7 @@ extension NotchAgentStrings {
         valueNote: "API 价值是按 API 标价完成同样工作的费用。套餐则按固定价格收费。",
         resetsCard: "重置",
         useReset: "使用一次重置",
-        resetConfirm: "现在重置会话和本周额度？",
+        resetConfirm: "现在使用一次重置？",
         confirmReset: "重置",
         resetting: "正在重置…",
         resetDone: "额度已重置",
@@ -1473,7 +1473,7 @@ extension NotchAgentStrings {
         resetsSignIn: "使用套餐登录 Codex 后即可查看重置",
         resetsUpdate: "请更新 Codex 以在此使用重置",
         resetsCheckFailed: "无法检查重置",
-        resetsHelp: "一次重置会同时恢复 Codex 的会话额度和每周额度。Codex 用自己的登录信息检查你的重置，Vorssaint 从不读取这些信息。")
+        resetsHelp: "使用重置时，由 Codex 决定恢复哪些符合条件的使用额度。")
 
     static let zhTW = NotchAgentStrings(
         title: "AI 代理",
@@ -1559,7 +1559,7 @@ extension NotchAgentStrings {
         valueNote: "API 價值是以 API 定價完成同樣工作的費用。方案則以固定價格收費。",
         resetsCard: "重設",
         useReset: "使用一次重設",
-        resetConfirm: "現在重設工作階段和本週額度？",
+        resetConfirm: "現在使用一次重設？",
         confirmReset: "重設",
         resetting: "正在重設…",
         resetDone: "額度已重設",
@@ -1572,7 +1572,7 @@ extension NotchAgentStrings {
         resetsSignIn: "使用方案登入 Codex 後即可查看重設",
         resetsUpdate: "請更新 Codex 以在此使用重設",
         resetsCheckFailed: "無法檢查重設",
-        resetsHelp: "一次重設會同時恢復 Codex 的工作階段額度和每週額度。Codex 用自己的登入資訊檢查你的重設，Vorssaint 從不讀取這些資訊。")
+        resetsHelp: "使用重設時，由 Codex 決定恢復哪些符合條件的使用額度。")
 
     static let zhHK = NotchAgentStrings(
         title: "AI 代理",
@@ -1658,7 +1658,7 @@ extension NotchAgentStrings {
         valueNote: "API 價值是以 API 定價完成同樣工作的費用。計劃則以固定價格收費。",
         resetsCard: "重設",
         useReset: "使用一次重設",
-        resetConfirm: "現在重設工作階段和本週額度？",
+        resetConfirm: "現在使用一次重設？",
         confirmReset: "重設",
         resetting: "正在重設…",
         resetDone: "額度已重設",
@@ -1671,7 +1671,7 @@ extension NotchAgentStrings {
         resetsSignIn: "使用計劃登入 Codex 後即可查看重設",
         resetsUpdate: "請更新 Codex 以在此使用重設",
         resetsCheckFailed: "無法檢查重設",
-        resetsHelp: "一次重設會同時恢復 Codex 的工作階段額度和每週額度。Codex 用自己的登入資料檢查你的重設，Vorssaint 從不讀取這些資料。")
+        resetsHelp: "使用重設時，由 Codex 決定恢復哪些符合條件的使用額度。")
 }
 
 /// Interactive sessions use the same language selection as the usage cards.

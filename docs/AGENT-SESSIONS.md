@@ -57,7 +57,10 @@ account, including when only other profiles were added.
 The resets header keeps the count beside its title and the use action on the
 same row. Available reset credits list their expiration date/time and relative
 expiry, soonest first; expirations within a day are highlighted. Count-only
-answers do not invent dates. Confirmation and redemption handling are unchanged.
+answers do not invent dates. Reset type, title and description are preserved;
+provided titles and descriptions appear alongside each expiration. Codex decides
+which eligible windows a redemption renews; confirmation does not promise a
+session and weekly reset together. Redemption handling is unchanged.
 **Usage and history** contains spending, trend, models, projects and activity. The period selector
 appears only there. Existing visibility and ordering preferences still filter
 and order usage sections; Live now controls the dedicated overview rather than

@@ -4,11 +4,13 @@
 import Darwin
 import Foundation
 
-/// A banked reset: one renewal of the Codex session and weekly limits at
-/// once, kept on the account until it is used or expires.
+/// A banked reset, applied to eligible windows by Codex when redeemed.
 struct AgentCodexReset: Equatable, Identifiable {
     let id: String
     let expiresAt: Date?
+    let resetType: String?
+    let title: String?
+    let description: String?
 }
 
 /// The account's banked resets, as Codex reads them.
@@ -148,7 +150,10 @@ enum AgentCodexServer {
                   (credit["status"] as? String ?? "available") == "available" else { return nil }
             let expires = AgentLogParser.seconds(credit["expiresAt"])
             if let expires, expires <= now { return nil }
-            return AgentCodexReset(id: id, expiresAt: expires)
+            return AgentCodexReset(id: id, expiresAt: expires,
+                                   resetType: credit["resetType"] as? String,
+                                   title: credit["title"] as? String,
+                                   description: credit["description"] as? String)
         }
         let resets = listed.sorted { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
         let count = max(resets.count, AgentLogParser.int(credits?["availableCount"]))

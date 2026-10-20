@@ -1036,19 +1036,29 @@ private struct NotchAgentResetsCard: View {
             if summary.available > 0 {
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(summary.resets) { reset in
-                        HStack(spacing: 6) {
-                            Image(systemName: "hourglass").frame(width: 17)
-                            if let date = reset.expiresAt {
-                                Text(date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale)))
-                                Spacer(minLength: 6)
-                                Text(date.formatted(.relative(presentation: .named).locale(locale)))
-                            } else {
-                                Text("—")
+                        VStack(alignment: .leading, spacing: 3) {
+                            if let title = reset.title, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(title).font(.system(size: 10, weight: .medium))
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
+                            if let description = reset.description, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(description).font(.system(size: 9)).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            HStack(spacing: 6) {
+                                Image(systemName: "hourglass").frame(width: 17)
+                                if let date = reset.expiresAt {
+                                    Text(date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale)))
+                                    Spacer(minLength: 6)
+                                    Text(date.formatted(.relative(presentation: .named).locale(locale)))
+                                } else {
+                                    Text("—")
+                                }
+                            }
+                            .font(.system(size: 10)).monospacedDigit()
+                            .foregroundStyle(reset.expiresAt.map { $0.timeIntervalSince(now) < 86_400 } == true ? Color.orange : Color.secondary)
+                            .help(reset.expiresAt.map { $0.formatted(.dateTime.day().month(.wide).year().hour().minute().timeZone().locale(locale)) } ?? "—")
                         }
-                        .font(.system(size: 10)).monospacedDigit()
-                        .foregroundStyle(reset.expiresAt.map { $0.timeIntervalSince(now) < 86_400 } == true ? Color.orange : Color.secondary)
-                        .help(reset.expiresAt.map { $0.formatted(.dateTime.day().month(.wide).year().hour().minute().timeZone().locale(locale)) } ?? "—")
                     }
                 }
             } else {
