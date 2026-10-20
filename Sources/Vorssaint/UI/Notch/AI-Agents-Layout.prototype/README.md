@@ -21,6 +21,8 @@ O experimento de expansão inline foi desfeito pelo usuário: detalhes continuam
 em outra tela. Refinamento final das linhas de sessão: duração alinhada à direita
 sob o estado, com números tabulares, e seta de abertura sem fundo ou borda,
 como o ícone de limites. O restante será ajustado na implementação nativa.
+A última linha de sessão (inclusive uma sessão única) não tem borda inferior;
+o separador do rodapé de limites já faz essa divisão.
 
 ## Rodar
 
