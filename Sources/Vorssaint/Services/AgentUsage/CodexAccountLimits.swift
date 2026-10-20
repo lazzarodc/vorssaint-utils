@@ -132,6 +132,19 @@ enum CodexAccountUsageReader {
         return result
     }
 
+    /// Reset checks and redemption must target exactly the same home. An
+    /// invalid added home never falls back to the default account.
+    static func environment(profile: CodexAccountProfile?, executable: URL, searchPath: String?,
+                            home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                            base: [String: String] = ProcessInfo.processInfo.environment) -> [String: String]? {
+        let directory: URL
+        if let profile {
+            guard let canonical = profile.canonicalDirectory else { return nil }
+            directory = canonical
+        } else { directory = home.appendingPathComponent(".codex", isDirectory: true) }
+        return environment(directory: directory, executable: executable, searchPath: searchPath, base: base)
+    }
+
     /// Asks only for the account and its limits, never refreshing its
     /// sign-in on purpose and never using a reset. A Codex from before resets
     /// still reports limits, so none are required.

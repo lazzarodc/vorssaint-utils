@@ -97,6 +97,19 @@ enum CodexAccountLimitsTests {
 
     private static func boundaries(_ suite: TestSuite, root: URL, profiles: [CodexAccountProfile]) throws {
         let manager = FileManager.default
+        let resetCLI = URL(fileURLWithPath: "/usr/bin/false")
+        let inherited = ["CODEX_HOME": "/wrong-account", "CODEX_ACCESS_TOKEN": "test-token"]
+        let personal = CodexAccountUsageReader.environment(profile: profiles[0], executable: resetCLI, searchPath: nil, home: root, base: inherited)
+        let work = CodexAccountUsageReader.environment(profile: profiles[1], executable: resetCLI, searchPath: nil, home: root, base: inherited)
+        let standardEnv = CodexAccountUsageReader.environment(profile: nil, executable: resetCLI, searchPath: nil, home: root, base: inherited)
+        let invalidResetProfile = CodexAccountProfile(id: UUID().uuidString, name: "Invalid", directory: root.appendingPathComponent("missing").path)
+        suite.expect(personal?["CODEX_HOME"] == profiles[0].canonicalDirectory?.path
+                        && work?["CODEX_HOME"] == profiles[1].canonicalDirectory?.path
+                        && personal?["CODEX_HOME"] != work?["CODEX_HOME"]
+                        && standardEnv?["CODEX_HOME"] == root.appendingPathComponent(".codex").path
+                        && personal?["CODEX_ACCESS_TOKEN"] == nil
+                        && CodexAccountUsageReader.environment(profile: invalidResetProfile, executable: resetCLI, searchPath: nil) == nil,
+                     "reset reads and redemption pin the requested home, clear inherited authentication, and never fall back on an invalid profile")
         let first = URL(fileURLWithPath: profiles[0].directory)
         suite.expect(CodexAccountProfile.decode(CodexAccountProfile.encode(profiles)) == profiles,
                      "Codex account names, identifiers and folders survive saving")
@@ -332,6 +345,15 @@ enum CodexAccountLimitsTests {
         empty.pause()
 
         defaults.set(CodexAccountProfile.encode(profiles), forKey: DefaultsKey.notchAgentsCodexProfiles)
+        let isolated = CodexProfileLimitsService(defaults: defaults, reader: Probe().read)
+        isolated.synchronize()
+        let renewed = AgentLimits(provider: .codex, windows: [], observedAt: Date(), source: .account)
+        isolated.noteResetLimits(renewed, profile: profiles[0])
+        isolated.noteResetLimits(AgentLimits(provider: .codex, windows: [], observedAt: renewed.observedAt.addingTimeInterval(-1), source: .account), profile: profiles[0])
+        isolated.noteResetLimits(renewed, profile: CodexAccountProfile(id: profiles[1].id, name: "Moved", directory: "/different-home"))
+        suite.expect(isolated.states[0].limits == renewed && isolated.states[1].limits == nil,
+                     "a reset updates only its exact profile, rejects stale limits, and never updates a moved or other account")
+        isolated.pause()
         let probe = Probe()
         let shellLookups = NSLock()
         var lookups = 0

@@ -57,7 +57,8 @@ struct NotchAgentsView: View {
     }
     private var legacyProviders: [AgentProvider] { providers.filter { $0 == .opencode || $0 == .copilot } }
     private var limitTiles: [NotchAgentTile] {
-        cards.contains(.limits) ? NotchAgentSupport.tiles(cards: [.limits], providers: providers, codexAccounts: codexAccounts.map(\.id)) : []
+        let visible = providers.filter { cards.contains(.limits) || ($0 == .codex && cards.contains(.resets)) }
+        return NotchAgentSupport.tiles(cards: [.limits], providers: visible, codexAccounts: codexAccounts.map(\.id))
     }
     private var usageRows: [[NotchAgentTile]] {
         NotchAgentSupport.rows(NotchAgentSupport.tiles(cards: cards.filter { ![.limits, .live, .resets].contains($0) }, providers: providers), width: size.width)
@@ -198,12 +199,22 @@ struct NotchAgentsView: View {
                     VStack(spacing: 8) {
                         ForEach(limitTiles) { tile in
                             if let provider = tile.provider {
-                                NotchAgentLimitsCard(provider: provider, snapshot: usage.snapshot, now: now,
-                                    display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text, account: account(tile, now: now))
+                                VStack(alignment: .leading, spacing: 0) {
+                                    NotchAgentLimitsCard(provider: provider, snapshot: usage.snapshot, now: now,
+                                        display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text,
+                                        account: account(tile, now: now), showsLimits: cards.contains(.limits))
+                                    if provider == .codex, cards.contains(.resets) {
+                                        if let id = tile.accountID {
+                                            if let state = codexAccounts.first(where: { $0.id == id }) {
+                                                NotchAgentResetsCard(now: now, text: text, profile: state.profile)
+                                                    .id(state.profile.directory).padding(.leading, 23)
+                                            }
+                                        } else {
+                                            NotchAgentResetsCard(now: now, text: text).padding(.leading, 23)
+                                        }
+                                    }
+                                }
                             }
-                        }
-                        if providers.contains(.codex), cards.contains(.resets) {
-                            NotchAgentResetsCard(now: now, text: text, showsDefaultAccount: !codexAccounts.isEmpty)
                         }
                         if limitTiles.isEmpty && !(providers.contains(.codex) && cards.contains(.resets)) { Text(text.noCards).foregroundStyle(.secondary).font(.system(size: 11)).padding(.vertical, 16) }
                     }
@@ -312,6 +323,7 @@ private struct NotchAgentLimitsCard: View {
     let display: NotchAgentLimitDisplay
     let text: NotchAgentStrings
     var account: NotchAgentAccount? = nil
+    var showsLimits = true
     @Environment(\.locale) private var locale
 
     private var limits: AgentLimits? {
@@ -358,28 +370,30 @@ private struct NotchAgentLimitsCard: View {
                         }
                     }
                 }
-                if let account {
-                    let notes = NotchAgentSupport.accountNotes(
-                        hasWindows: !windows.isEmpty, checking: account.checking, failure: account.failure,
-                        hint: account.refreshHint, loading: text.loading,
-                        updated: limits.map { text.updated($0.observedAt.formatted(
-                            .relative(presentation: .named, unitsStyle: .abbreviated).locale(locale))) })
-                    if let placeholder = notes.placeholder {
-                        Text(placeholder).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                if showsLimits {
+                    if let account {
+                        let notes = NotchAgentSupport.accountNotes(
+                            hasWindows: !windows.isEmpty, checking: account.checking, failure: account.failure,
+                            hint: account.refreshHint, loading: text.loading,
+                            updated: limits.map { text.updated($0.observedAt.formatted(
+                                .relative(presentation: .named, unitsStyle: .abbreviated).locale(locale))) })
+                        if let placeholder = notes.placeholder {
+                            Text(placeholder).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                        if !windows.isEmpty { meters(windows) }
+                        // What went wrong since the reading shown, or how old it is.
+                        if let note = notes.caption {
+                            Text(note)
+                                .font(.system(size: 8.5))
+                                .foregroundStyle(account.failure == nil && !stale ? Color.secondary : Color.orange)
+                                .lineLimit(1)
+                        }
+                    } else if windows.isEmpty {
+                        estimate
+                    } else {
+                        meters(windows)
+                        caption
                     }
-                    if !windows.isEmpty { meters(windows) }
-                    // What went wrong since the reading shown, or how old it is.
-                    if let note = notes.caption {
-                        Text(note)
-                            .font(.system(size: 8.5))
-                            .foregroundStyle(account.failure == nil && !stale ? Color.secondary : Color.orange)
-                            .lineLimit(1)
-                    }
-                } else if windows.isEmpty {
-                    estimate
-                } else {
-                    meters(windows)
-                    caption
                 }
             }
         }
@@ -955,9 +969,13 @@ private struct NotchAgentActivityCard: View {
 private struct NotchAgentResetsCard: View {
     let now: Date
     let text: NotchAgentStrings
-    /// Beside added Codex accounts, says which one its resets belong to.
-    var showsDefaultAccount = false
-    @ObservedObject private var resets = AgentCodexResetService.shared
+    @ObservedObject private var resets: AgentCodexResetService
+
+    init(now: Date, text: NotchAgentStrings, profile: CodexAccountProfile? = nil) {
+        self.now = now
+        self.text = text
+        _resets = ObservedObject(wrappedValue: AgentCodexResetService.account(profile))
+    }
     @ObservedObject private var l10n = L10n.shared
     @State private var confirming = false
     @Environment(\.locale) private var locale
@@ -970,11 +988,9 @@ private struct NotchAgentResetsCard: View {
     }
 
     var body: some View {
-        NotchAgentCardChrome {
+        Group {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    NotchAgentMark(provider: .codex, size: 13, tint: tint)
-                        .frame(width: 17, height: 17)
                     Text(text.resetsCard).font(.system(size: 10.5, weight: .semibold))
                     if let summary = resets.summary {
                         Text(summary.available.formatted(.number.locale(locale)))
@@ -988,13 +1004,10 @@ private struct NotchAgentResetsCard: View {
                         useButton
                     }
                 }
-                if showsDefaultAccount {
-                    Text("Codex · " + FeatureStrings.codexAccounts(l10n.language).defaultAccount)
-                        .font(.system(size: 8.5)).foregroundStyle(.secondary).lineLimit(1)
-                }
                 content
             }
         }
+        .padding(.bottom, 8)
         .help(text.resetsHelp)
         .onAppear { resets.refreshIfStale() }
         // A count that changed while the question was open asks again.

@@ -52,8 +52,13 @@ Limits shows all configured accounts without account dropdowns, including
 failure/staleness and refresh controls. Account blocks and resets are separated
 by spacing rather than divider lines, with extra room between blocks.
 Session/longer-window meters align to provider marks, with percentage and renewal
-on the same row. Codex resets remain explicitly associated with its default
-account, including when only other profiles were added.
+on the same row. Resets are nested beneath their Codex account, without a
+second provider icon or a separate account card. Each added home has its own
+reset service, count, errors, confirmation and retry key. Checks and redemption
+both pin CODEX_HOME to that profile; an invalid home never falls back to another
+account. The implicit default card explicitly uses ~/.codex. Fresh reset limits
+update only the corresponding account. Hiding Limits still leaves the account
+header when Resets is enabled.
 The resets header keeps the count beside its title and the use action on the
 same row. Available reset credits list their expiration date/time and relative
 expiry, soonest first; expirations within a day are highlighted. Count-only

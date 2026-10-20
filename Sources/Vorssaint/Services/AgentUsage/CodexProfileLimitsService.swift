@@ -140,6 +140,15 @@ final class CodexProfileLimitsService: ObservableObject {
         startNext()
     }
 
+    /// A redemption returns fresh limits for exactly this home, not the
+    /// provider-wide log reading or another profile with the same plan.
+    func noteResetLimits(_ limits: AgentLimits, profile: CodexAccountProfile) {
+        guard let index = states.firstIndex(where: { $0.id == profile.id && $0.profile.directory == profile.directory }),
+              states[index].limits.map({ $0.observedAt <= limits.observedAt }) ?? true else { return }
+        states[index].limits = limits
+        states[index].failure = nil
+    }
+
     private func startNext() {
         guard running == nil, !waiting.isEmpty else { return }
         let next = waiting.removeFirst()
@@ -171,7 +180,9 @@ final class CodexProfileLimitsService: ObservableObject {
         state.checking = false
         switch result {
         case .success(let reading):
-            state.limits = reading.limits
+            if state.limits.map({ $0.observedAt <= reading.limits.observedAt }) ?? true {
+                state.limits = reading.limits
+            }
             state.plan = reading.plan
             state.failure = nil
         case .failure(.cancelled):

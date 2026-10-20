@@ -45,7 +45,20 @@ final class AgentCodexResetService: ObservableObject {
     }
     private var pending: Attempt?
 
-    private init() {}
+    private let profile: CodexAccountProfile?
+    private static var profileServices: [String: AgentCodexResetService] = [:]
+
+    /// Keep retries and idempotency keys with the same home across tab changes.
+    static func account(_ profile: CodexAccountProfile?) -> AgentCodexResetService {
+        guard let profile else { return shared }
+        let key = profile.id + ":" + profile.directory
+        if let service = profileServices[key] { return service }
+        let service = AgentCodexResetService(profile: profile)
+        profileServices[key] = service
+        return service
+    }
+
+    private init(profile: CodexAccountProfile? = nil) { self.profile = profile }
 
     func refreshIfStale(now: Date = Date()) {
         // Only the person can sign Codex in or update it, so those wait as long as a reading.
@@ -59,13 +72,14 @@ final class AgentCodexResetService: ObservableObject {
         checking = true
         attempted = Date()
         let apps = Self.apps()
-        let known = shellPath
+        let known = shellPath, profile = self.profile
         queue.async { [weak self] in
             let path = searchingShell && known == nil ? AgentCodexServer.loginShellPath() : known
             let result: Result<AgentCodexResetSummary, AgentCodexServer.Failure>
             if let executable = Self.executable(apps: apps, searchPath: path) {
-                result = AgentCodexServer.check(executable, environment: AgentCodexServer.environment(for: executable,
-                                                                                                     searchPath: path))
+                if let environment = CodexAccountUsageReader.environment(profile: profile, executable: executable, searchPath: path) {
+                    result = AgentCodexServer.check(executable, environment: environment)
+                } else { result = .failure(.refused) }
             } else {
                 result = .failure(.missing)
             }
@@ -91,14 +105,17 @@ final class AgentCodexResetService: ObservableObject {
             ?? Attempt(key: UUID().uuidString, credit: summary.resets.first?.id, date: now)
         pending = attempt
         let apps = Self.apps()
-        let path = shellPath
+        let path = shellPath, profile = self.profile
         queue.async { [weak self] in
             guard let executable = Self.executable(apps: apps, searchPath: path) else {
                 DispatchQueue.main.async { self?.finishRedeem(.failure(.missing), summary: nil) }
                 return
             }
-            let result = AgentCodexServer.redeem(executable, environment: AgentCodexServer.environment(for: executable,
-                                                                                                      searchPath: path),
+            guard let environment = CodexAccountUsageReader.environment(profile: profile, executable: executable, searchPath: path) else {
+                DispatchQueue.main.async { self?.finishRedeem(.failure(.refused), summary: nil) }
+                return
+            }
+            let result = AgentCodexServer.redeem(executable, environment: environment,
                                                  credit: attempt.credit, key: attempt.key)
             DispatchQueue.main.async { self?.finishRedeem(result.outcome, summary: result.summary) }
         }
@@ -120,6 +137,7 @@ final class AgentCodexResetService: ObservableObject {
             pending = nil
             fail(failure)
         }
+        if let profile { CodexProfileLimitsService.shared.refresh(id: profile.id, force: true) }
         if let summary { accept(summary) } else if [nil, .unreachable, .refused].contains(self.failure) { refresh() }
     }
 
@@ -127,7 +145,10 @@ final class AgentCodexResetService: ObservableObject {
         self.summary = summary
         failure = nil
         attempted = summary.checkedAt
-        if let limits = summary.limits { AgentUsageService.shared.noteLimits(limits) }
+        if let limits = summary.limits {
+            if let profile { CodexProfileLimitsService.shared.noteResetLimits(limits, profile: profile) }
+            else { AgentUsageService.shared.noteLimits(limits) }
+        }
     }
 
     private func fail(_ failure: AgentCodexServer.Failure) {
