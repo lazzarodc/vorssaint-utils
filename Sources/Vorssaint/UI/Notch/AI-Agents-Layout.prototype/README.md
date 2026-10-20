@@ -23,6 +23,15 @@ sob o estado, com números tabulares, e seta de abertura sem fundo ou borda,
 como o ícone de limites. O restante será ajustado na implementação nativa.
 A última linha de sessão (inclusive uma sessão única) não tem borda inferior;
 o separador do rodapé de limites já faz essa divisão.
+Alinhamento refinado: rodapé sem cantos próprios e com o mesmo recuo de 3 px
+das linhas de sessão; gauge com largura de alvo igual à seta. A contagem aparece
+apenas na faixa superior, sem repetição em “Suas sessões”. Estado usa uma coluna
+fixa para o ponto colorido e uma coluna de texto, com duração abaixo alinhada à
+direita. Os símbolos provisórios de provedor foram substituídos pelas imagens
+`openai.png` e `claude-color.png` da referência Agents Island, copiadas para
+`icons/`; a primeira é a marca OpenAI usada pela referência para Codex.
+Origem: `agents-island/Sources/AgentsIsland/Resources/agents/`, sob a licença MIT
+e atribuição preservadas em `Resources/AgentsIsland-LICENSE.txt` deste repositório.
 
 ## Rodar
 
