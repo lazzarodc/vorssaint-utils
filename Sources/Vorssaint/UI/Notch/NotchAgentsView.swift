@@ -75,12 +75,6 @@ struct NotchAgentsView: View {
                     overview(now: context.date)
                 }
             }
-            .notchBand(trailing: {
-                let count = interactiveSessions.filter(needsAttention).count
-                Text(String(format: label(count > 0 ? .pending : .sessions),
-                            (count > 0 ? count : interactiveSessions.count).formatted(.number.locale(l10n.language.formattingLocale()))))
-                    .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
-            })
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .environment(\.locale, l10n.language.formattingLocale())
