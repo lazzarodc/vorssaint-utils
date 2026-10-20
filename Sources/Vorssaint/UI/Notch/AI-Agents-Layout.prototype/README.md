@@ -32,6 +32,12 @@ direita. Os símbolos provisórios de provedor foram substituídos pelas imagens
 `icons/`; a primeira é a marca OpenAI usada pela referência para Codex.
 Origem: `agents-island/Sources/AgentsIsland/Resources/agents/`, sob a licença MIT
 e atribuição preservadas em `Resources/AgentsIsland-LICENSE.txt` deste repositório.
+Refinamento posterior: remover o título interno “Suas sessões”; agrupar os dois
+limites próximos à esquerda, sem nomes visíveis (ícone, tooltip e nome acessível
+identificam o provedor). O gauge permanece à direita. Estado e duração agora
+ocupam a mesma linha em três colunas: ponto, texto e tempo sem quebra. Isso
+substitui a disposição anterior com duração abaixo do estado, reportada como
+visualmente quebrada pelo usuário.
 
 ## Rodar
 
