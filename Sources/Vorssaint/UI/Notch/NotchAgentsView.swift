@@ -160,7 +160,7 @@ struct NotchAgentsView: View {
             : [.init(name: provider.displayName, limits: usage.snapshot.limits[provider])]
         let selected = NotchAgentSupport.sessionSummary(readings, now: now)
         return HStack(spacing: 5) {
-            NotchAgentMark(provider: provider, size: 13).frame(width: 17, height: 17)
+            NotchAgentMark(provider: provider, size: 9).frame(width: 13, height: 13)
             if let selected {
                 let window = selected.window
                 Text(display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent(window.usedFraction)) : text.left(AgentFormat.percent(window.remainingFraction)))
