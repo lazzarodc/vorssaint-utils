@@ -5,7 +5,6 @@
 // See Resources/AgentsIsland-LICENSE.txt for the original license.
 
 import AppKit
-import ApplicationServices
 import Foundation
 
 /// Sends text to an agent's terminal session and jumps to it, targeting the
@@ -136,19 +135,9 @@ enum TerminalBridge {
                 let applications = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
                 guard let index = activationTargetIndex(appNamed: app, runningNames: applications.map(\.localizedName)) else { return }
                 let target = applications[index]
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let windowID = editorWindowID(pid: target.processIdentifier, cwd: agent.cwd)
-                    DispatchQueue.main.async {
-                        if let windowID {
-                            WindowActivator.activate(pid: target.processIdentifier, windowID: windowID,
-                                                     appName: target.localizedName ?? app)
-                        } else {
-                            if target.isHidden { target.unhide() }
-                            if !target.activate(from: NSRunningApplication.current, options: []) {
-                                target.activate(options: [])
-                            }
-                        }
-                    }
+                if target.isHidden { target.unhide() }
+                if !target.activate(from: NSRunningApplication.current, options: []) {
+                    target.activate(options: [])
                 }
             }
         case nil:
@@ -213,46 +202,6 @@ enum TerminalBridge {
     /// Pure routing seam for editor activation; no UI or keystrokes in tests.
     static func activationTargetIndex(appNamed name: String, runningNames: [String?]) -> Int? {
         runningNames.firstIndex { matches(appNamed: name, frontmost: $0) }
-    }
-
-    /// Select a uniquely matching workspace; list order is not a target.
-    static func editorWindowIndex(cwd: String?, titles: [String]) -> Int? {
-        guard let cwd, cwd.hasPrefix("/") else { return nil }
-        let path = URL(fileURLWithPath: cwd).standardizedFileURL.path
-        let folders = URL(fileURLWithPath: path).pathComponents.filter { $0 != "/" }.reversed()
-        let scores = titles.map { title -> Int in
-            let parts = title.replacingOccurrences(of: " — ", with: "\n")
-                .replacingOccurrences(of: " - ", with: "\n")
-                .components(separatedBy: "\n")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            if parts.contains(path) { return Int.max }
-            for (distance, folder) in folders.enumerated() {
-                if parts.contains(folder) || parts.contains(folder + " (Workspace)") {
-                    return folders.count - distance
-                }
-            }
-            return 0
-        }
-        guard let best = scores.max(), best > 0 else { return nil }
-        let matches = scores.indices.filter { scores[$0] == best }
-        return matches.count == 1 ? matches[0] : nil
-    }
-
-    private static func editorWindowID(pid: pid_t, cwd: String?) -> CGWindowID? {
-        guard cwd != nil, AXIsProcessTrusted() else { return nil }
-        let application = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(application, 0.35)
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
-              let windows = value as? [AXUIElement] else { return nil }
-        let titles = windows.map { window -> String in
-            AXUIElementSetMessagingTimeout(window, 0.35)
-            var title: CFTypeRef?
-            AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title)
-            return title as? String ?? ""
-        }
-        guard let index = editorWindowIndex(cwd: cwd, titles: titles) else { return nil }
-        return AXWindowResolver.windowID(for: windows[index])
     }
 
     /// The name-matching half, separated from NSWorkspace so it can be tested.

@@ -5,14 +5,6 @@ import Foundation
 @main
 struct MonitorTests {
     static func main() {
-        guard TerminalBridge.editorWindowIndex(cwd: "/Users/me/meus-repos/broker", titles: ["vorssaint-agentic", "broker"]) == 1,
-              TerminalBridge.editorWindowIndex(cwd: "/Users/me/meus-repos/broker/src", titles: ["main.swift — broker — Visual Studio Code", "vorssaint-agentic"]) == 0,
-              TerminalBridge.editorWindowIndex(cwd: "/Users/me/broker", titles: ["broker", "broker"]) == nil,
-              TerminalBridge.editorWindowIndex(cwd: "/Users/me/broker", titles: ["brokerage", "vorssaint-agentic"]) == nil,
-              TerminalBridge.editorWindowIndex(cwd: nil, titles: ["broker"]) == nil else {
-            print("FAIL: editor jump must select the session workspace across windows, without substring or ambiguous matches")
-            exit(1)
-        }
         let runningNames: [String?] = ["Xcode", "iTerm2", nil, "Visual Studio Code"]
         guard TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: runningNames) == 3,
               TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: ["Xcode", "iTerm2"]) == nil,

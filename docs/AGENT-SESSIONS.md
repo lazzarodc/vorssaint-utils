@@ -109,11 +109,8 @@ Terminal targeting and state heuristics follow the reference. iTerm, Terminal,
 tmux, WezTerm and kitty have their respective routes. Jumping to an editor such
 as VS Code activates its running GUI application natively, resolving display
 aliases such as VS Code → Visual Studio Code without AppleScript Automation.
-With Accessibility available, a unique workspace title matching the session's
-working folder (or its nearest parent) selects that window through the existing
-window activator, including minimized windows and other Spaces. Duplicate or
-unmatched titles fall back to app activation. This does not select a particular
-integrated terminal tab. Generic text/key sending still uses simulated typing
+This brings the editor forward; it does not select a particular integrated
+terminal tab or workspace. Generic text/key sending still uses simulated typing
 into the front window and may need Automation/Accessibility permissions.
 Codex has no hook approval route.
 Disabling AI Agents stops polling and hook draining; suspending the island pauses

@@ -30,7 +30,6 @@ swiftc "$source_dir/Agent.swift" "$source_dir/AgentSessionSoundSupport.swift" "$
     "$source_dir/ClaudeSessions.swift" "$source_dir/CodexSessions.swift" \
     "$source_dir/TailRead.swift" "$source_dir/RolloutAssignment.swift" \
     "$source_dir/ProcessNaming.swift" "$source_dir/HookSettings.swift" \
-    Sources/Vorssaint/Services/Switcher/AXWindowResolver.swift \
     Tests/AgentSessions/HostSupport.swift Tests/AgentSessions/MonitorTests.swift -o "$work/Monitor"
 "$work/Monitor"
 echo "▸ SoundLibrary"
