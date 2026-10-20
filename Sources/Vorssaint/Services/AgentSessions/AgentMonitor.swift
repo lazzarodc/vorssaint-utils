@@ -93,17 +93,24 @@ final class AgentMonitor: ObservableObject {
 
     // MARK: - Scanning
 
-    private struct ProcInfo {
+    struct ProcInfo {
         let ppid: Int32
-        let command: String // full path or command name (ps comm)
+        let command: String
     }
 
-    private static func findAgents(enabled: Set<AgentKind>, isCancelled: () -> Bool) -> [AgentSession] {
+    struct Candidate {
+        let pid: Int32
+        let ppid: Int32
+        let cpu: Double
+        let tty: String?
+        let etime: String
+        let args: String
+        let kind: AgentKind
+    }
 
-        // Full process table: pid, ppid, cpu, tty, etime, args — one pass.
-        let output = run("/bin/ps", ["-axwwo", "pid=,ppid=,pcpu=,tty=,etime=,args="])
+    static func processTable(_ output: String, enabled: Set<AgentKind>) -> (processes: [Int32: ProcInfo], candidates: [Candidate]) {
         var procs: [Int32: ProcInfo] = [:]
-        var candidates: [(pid: Int32, ppid: Int32, cpu: Double, tty: String?, etime: String, args: String, kind: AgentKind)] = []
+        var candidates: [Candidate] = []
 
         for line in output.split(separator: "\n") {
             let parts = line.trimmingCharacters(in: .whitespaces)
@@ -119,19 +126,29 @@ final class AgentMonitor: ObservableObject {
             // and Windsurf entirely. See ProcessNaming.
             procs[pid] = ProcInfo(ppid: ppid, command: args)
             if let kind = detect(args: args), enabled.contains(kind), !isHeadless(tty: tty, args: args) {
-                candidates.append((pid, ppid, cpu, tty, String(parts[4]), args, kind))
+                candidates.append(Candidate(pid: pid, ppid: ppid, cpu: cpu, tty: tty, etime: String(parts[4]), args: args, kind: kind))
             }
         }
 
-        // Drop children whose parent is the same agent (forked helpers).
-        let agentKindByPid = Dictionary(uniqueKeysWithValues: candidates.map { ($0.pid, $0.kind) })
-        let rows = candidates.filter {
-            // Drop forked helpers of the same agent…
-            agentKindByPid[$0.ppid] != $0.kind
-            // …and GUI background helpers, which Electron names after the app
-            // itself so they match an agent alias. See ProcessNaming.
-            && !ProcessNaming.isGUIHelper(tty: $0.tty, parentCommand: procs[$0.ppid]?.command)
+        // Remove GUI helpers before deduplicating children: a CLI launched
+        // by an editor's Codex backend is an independent terminal session.
+        let visible = candidates.filter {
+            !ProcessNaming.isGUIHelper(tty: $0.tty, parentCommand: procs[$0.ppid]?.command)
         }
+        let byPid = Dictionary(uniqueKeysWithValues: visible.map { ($0.pid, $0) })
+        let rows = visible.filter { row in
+            guard let parent = byPid[row.ppid], parent.kind == row.kind else { return true }
+            // Fork helpers share their parent's terminal; separate TTYs are
+            // separate sessions even when the executable/provider is the same.
+            return row.tty != parent.tty
+        }
+
+        return (procs, rows)
+    }
+
+    private static func findAgents(enabled: Set<AgentKind>, isCancelled: () -> Bool) -> [AgentSession] {
+        let output = run("/bin/ps", ["-axwwo", "pid=,ppid=,pcpu=,tty=,etime=,args="])
+        let (procs, rows) = processTable(output, enabled: enabled)
 
         // Retire pid → rollout mappings for codex processes that have exited.
         // Left unpruned, a recycled pid inherits the previous session's rollout
@@ -245,7 +262,8 @@ final class AgentMonitor: ObservableObject {
     private static func isHeadless(tty: String?, args: String) -> Bool {
         guard tty == nil else { return false }
         if args.contains("stream-json") || args.contains("--print") { return true }
-        return args.split(separator: " ").contains("-p")
+        let tokens = args.split(separator: " ")
+        return tokens.contains("-p") || tokens.contains("app-server") || tokens.contains("app-server-daemon")
     }
 
     /// Model from the command line: `-m x`, `--model x`, or `--model=x`.

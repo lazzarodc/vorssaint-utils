@@ -85,3 +85,38 @@ preferences on another Mac. Developer and normal builds have separate libraries.
 volume bounds, audio imports, invalid-file preservation and owned-file removal.
 To check playback manually, use the preview buttons and then a real working →
 waiting turn and a Claude permission hook. No automated test plays audible audio.
+
+## Acceptance run — 2026-10-20
+
+Checked the Developer build on the target Mac using isolated Claude and Codex
+CLI sessions in the same temporary project, without sending input to existing
+user sessions.
+
+- Both sessions appeared separately in the island after fixing process discovery.
+  A Codex editor backend previously suppressed its interactive child, while
+  terminal-less app-server processes appeared as sessions. The real scanner
+  missed the test PID before the fix and found it afterward. Regression fixtures
+  also cover independent TTYs and same-TTY fork helpers.
+- The Claude reply field accepted an unsent draft and retained keyboard focus;
+  the draft was cleared. The transcript detail showed the isolated conversation.
+- The module and Claude/Codex switches could be turned off and restored. Their
+  scan lifecycle is covered separately by the automated monitor tests.
+- Both test cards disappeared after their CLI processes exited; existing Claude
+  cards and usage cards remained visible.
+- Hook installation/removal worked through settings. After removal, Claude
+  settings matched their saved original JSON semantically. Sound preferences
+  remained at their original values. Glass and Ping previews were invoked;
+  audible playback was not independently observed.
+- `./build.sh --test` passed 113,127 host checks, all 12 session suites and the
+  preference cleanup/uninstall/developer isolation checks. The Developer build
+  and `./build/VorssaintDeveloper --selftest` passed. The self-test required normal
+  host access for memory and uptime readings denied by the execution sandbox.
+
+Still unverified: sending replies/approvals through a native terminal, the live
+approval card lifecycle, audible event playback, and sleep/wake or lock/unlock.
+Computer Use refused access to iTerm. The isolated tool PTYs were identified as
+VS Code, so island submission was not used to avoid typing into an unrelated
+editor window. Claude produced real Bash permission prompts, but this run did
+not establish their island display/clear lifecycle. Its AskUserQuestion tool was
+unavailable even with the default tool set, so no real question interaction was
+validated. These limitations are not counted as passing acceptance checks.

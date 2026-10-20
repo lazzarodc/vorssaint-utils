@@ -11,6 +11,22 @@ struct MonitorTests {
         precondition(AgentMonitor.detect(args: "echo codex") == nil)
         precondition(AgentMonitor.argsModel("codex --model=gpt-5") == "gpt-5")
 
+        let table = """
+        900 1 0.0 ?? 00:03 /Applications/Code.app/Contents/MacOS/Electron
+        901 900 0.0 ?? 00:02 /usr/local/bin/codex --app-server-helper
+        902 901 0.0 ttys005 00:01 /usr/local/bin/codex --cd /tmp/project
+        903 1 0.0 ttys006 00:01 /usr/local/bin/codex
+        904 903 0.0 ttys006 00:01 /usr/local/bin/codex
+        905 1 0.0 ?? 00:01 /usr/local/bin/codex app-server
+        """
+        let candidates = AgentMonitor.processTable(table, enabled: [.codex]).candidates.map(\.pid)
+        precondition(candidates == [902, 903], "interactive children survive headless/editor parents; backend servers and fork helpers stay hidden")
+        let nested = """
+        910 1 0.0 ttys008 00:02 codex
+        911 910 0.0 ttys009 00:01 codex
+        """
+        precondition(AgentMonitor.processTable(nested, enabled: [.codex]).candidates.map(\.pid) == [910, 911],
+                     "independent terminal sessions must not be deduplicated by provider alone")
         let domain = "com.vorssaint.tests.sessions.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: domain)!
         defer { defaults.removePersistentDomain(forName: domain) }
