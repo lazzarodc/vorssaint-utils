@@ -128,7 +128,18 @@ enum TerminalBridge {
             }
             osascript("tell application \"kitty\" to activate")
         case .some(let app):
-            osascript("tell application \"\(app)\" to activate")
+            // Detector labels ("VS Code") are not AppleScript application
+            // names ("Visual Studio Code"). Activate the running app natively,
+            // using the same explicit aliases as notification suppression.
+            DispatchQueue.main.async {
+                let applications = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
+                guard let index = activationTargetIndex(appNamed: app, runningNames: applications.map(\.localizedName)) else { return }
+                let target = applications[index]
+                if target.isHidden { target.unhide() }
+                if !target.activate(from: NSRunningApplication.current, options: []) {
+                    target.activate(options: [])
+                }
+            }
         case nil:
             break
         }
@@ -186,6 +197,11 @@ enum TerminalBridge {
     /// our detector says "iTerm"/"VS Code" while macOS reports "iTerm2"/"Code".
     static func isFrontmost(appNamed name: String?) -> Bool {
         matches(appNamed: name, frontmost: NSWorkspace.shared.frontmostApplication?.localizedName)
+    }
+
+    /// Pure routing seam for editor activation; no UI or keystrokes in tests.
+    static func activationTargetIndex(appNamed name: String, runningNames: [String?]) -> Int? {
+        runningNames.firstIndex { matches(appNamed: name, frontmost: $0) }
     }
 
     /// The name-matching half, separated from NSWorkspace so it can be tested.

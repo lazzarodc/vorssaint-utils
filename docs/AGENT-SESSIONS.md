@@ -106,9 +106,13 @@ preferences and are not exported in a Vorssaint settings backup. Conversation
 content, process IDs and the spool are transient machine state.
 
 Terminal targeting and state heuristics follow the reference. iTerm, Terminal,
-tmux, WezTerm and kitty have their respective routes; generic terminals use
-activation and simulated typing into their front window. macOS Automation or
-Accessibility permissions may be needed. Codex has no hook approval route.
+tmux, WezTerm and kitty have their respective routes. Jumping to an editor such
+as VS Code activates its running GUI application natively, resolving display
+aliases such as VS Code → Visual Studio Code without AppleScript Automation.
+This brings the editor forward; it does not select a particular integrated
+terminal tab or workspace. Generic text/key sending still uses simulated typing
+into the front window and may need Automation/Accessibility permissions.
+Codex has no hook approval route.
 Disabling AI Agents stops polling and hook draining; suspending the island pauses
 this work too. Hiding the Live card also stops process and hook polling. A stopped scan cannot publish a late result. Provider preferences
 control which registries and transcripts are read.

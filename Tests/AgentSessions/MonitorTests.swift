@@ -5,6 +5,13 @@ import Foundation
 @main
 struct MonitorTests {
     static func main() {
+        let runningNames: [String?] = ["Xcode", "iTerm2", nil, "Visual Studio Code"]
+        guard TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: runningNames) == 3,
+              TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: ["Xcode", "iTerm2"]) == nil,
+              TerminalBridge.activationTargetIndex(appNamed: "Cursor", runningNames: ["Cursor"]) == 0 else {
+            print("FAIL: VS Code jump must resolve the running editor's real name without targeting Xcode or iTerm")
+            exit(1)
+        }
         precondition(AgentMonitor.detect(args: "/usr/local/bin/claude --model opus") == .claude)
         precondition(AgentMonitor.detect(args: "node /opt/bin/codex --model=gpt-5") == .codex)
         precondition(AgentMonitor.detect(args: "/Applications/Claude.app/Contents/MacOS/Claude") == nil)
@@ -68,6 +75,6 @@ struct MonitorTests {
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         precondition(monitor.agents.map(\.id) == [123, 124], "two sessions in one project stay separate after resume")
         monitor.stop()
-        print("✅ MonitorTests: detection, provider filtering and in-flight stop passed")
+        print("✅ MonitorTests: detection, editor activation routing, provider filtering and in-flight stop passed")
     }
 }
