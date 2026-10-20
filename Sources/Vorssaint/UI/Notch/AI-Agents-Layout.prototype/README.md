@@ -49,6 +49,19 @@ para distinguir também pela forma. Indicadores principais têm 7 px, com toolti
 e nome acessível preservados. A paleta inicial era uma escolha do protótipo,
 não uma cópia exata da implementação nativa.
 
+Painel de limites e uso revisado com os mesmos critérios: voltar sem fundo,
+abas de texto com sublinhado ativo, margem interna de 3 px e separadores só
+entre grupos. Provedores identificados pelos ícones; plano e nome de conta ficam
+visíveis para distinguir Padrão/Trabalho. Sessão e semana têm linhas próprias,
+percentual livre, ↻ tempo sem quebra e barra correspondente; remove-se o
+percentual repetido no cabeçalho e a frase longa com os mesmos valores. A conta
+extra mantém expansão por seta sem fundo. Renovações disponíveis ficam junto
+à conta padrão, com expiração e ação simulada no detalhe. O período aparece
+apenas em Consumo e histórico. Essa área usa o mesmo recuo, espaçamento menor,
+números tabulares e nenhum separador após o último grupo. Navegação e valores
+foram revisados no código e a sintaxe JavaScript passou; inspeção visual final
+fica para o comparador local, dadas as limitações anteriores de Computer Use.
+
 ## Rodar
 
 Na raiz deste worktree:
