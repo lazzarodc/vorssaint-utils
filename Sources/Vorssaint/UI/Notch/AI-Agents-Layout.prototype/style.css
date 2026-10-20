@@ -37,20 +37,22 @@
 .limit-summary>span:first-child{display:inline-flex;align-items:center;gap:4px}
 
 /* Limits detail follows the queue's 3px inner edge and plain navigation. */
-.capacity-head{padding-inline:3px;margin-block-end:7px;flex-shrink:0}
+.capacity-head{padding-inline:3px;margin-block-end:7px;flex-shrink:0;align-items:center}
+.capacity-head strong{display:flex;align-items:center;min-block-size:24px;line-height:1.2}
+.capacity-head .back svg{display:block}
 .capacity-head .back{display:grid;place-items:center;background:transparent;border:0;border-radius:0;inline-size:26px;block-size:24px;padding:0;color:#aeb9d0;font-size:18px}
 .capacity-head .back:hover{color:#f2f3f6}
 .capacity-head select{background:transparent;border:0;color:var(--sub);font-size:10px;padding:3px}
 .capacity-tabs{gap:18px;margin-block-end:4px;padding-inline:3px;border-block-end:1px solid #303238;flex-shrink:0}
 .capacity-tabs button{background:transparent;border-radius:0;padding:5px 0 7px;font-size:10px;color:var(--sub);border-block-end:2px solid transparent}
 .capacity-tabs button[aria-pressed=true]{background:transparent;border-block-end-color:#c5d2f2;color:var(--ink)}
-.capacity-content{padding-inline:3px;scrollbar-gutter:auto;flex:1}
+.capacity-content{padding-inline:3px;scrollbar-gutter:stable;flex:1}
 .limit-account{padding-block:9px;border-block-end:1px solid #303238}
 .limit-account:last-child{border-block-end:0;padding-block-end:0}
 .account-title{display:flex;align-items:center;gap:9px;min-inline-size:0}
 .account-title h4,.account-title strong{font-size:11px;font-weight:550;margin:0}
 .account-title .sub{margin-inline-start:auto;font-size:9px}
-.account-windows{margin-inline-start:22px;margin-block-start:7px}
+.account-windows{margin-inline-start:0;margin-block-start:7px}
 .limit-window+.limit-window{margin-block-start:8px}
 .window-reading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px 12px;font-size:10px}
 .window-label{color:var(--sub)}
@@ -63,11 +65,6 @@
 .account-windows .reset-summary{border-block-start:0;padding-block-start:0;margin-block-start:8px;font-size:10px}
 .account-windows .reset-summary summary{color:var(--sub)}
 .account-windows .reset-summary p{margin-block:7px}
-.extra-account>summary{display:flex;align-items:center;gap:7px;list-style:none}
-.extra-account>summary::-webkit-details-marker{display:none}
-.extra-account>summary .account-title{flex:1}
-.extra-account>summary::after{content:'›';font-size:16px;color:#aeb9d0;inline-size:26px;text-align:center}
-.extra-account[open]>summary::after{content:'⌄'}
 .capacity-content .usage-block{padding-block:9px}
 .capacity-content .usage-block:last-of-type{border-block-end:0}
 .capacity-content .usage-block h4{margin-block-end:6px}

@@ -61,6 +61,12 @@ apenas em Consumo e histórico. Essa área usa o mesmo recuo, espaçamento menor
 números tabulares e nenhum separador após o último grupo. Navegação e valores
 foram revisados no código e a sintaxe JavaScript passou; inspeção visual final
 fica para o comparador local, dadas as limitações anteriores de Computer Use.
+Correção após screenshots: contas configuradas ficam sempre expostas, incluindo
+o exemplo Trabalho, sem dropdown de conta. As barras e os rótulos de sessão e
+semana começam no mesmo eixo do ícone do provedor, removendo o recuo de 22 px.
+A área rolável reserva seu gutter para não deslocar as barras quando a rolagem
+aparece. O cabeçalho usa seta vetorial centralizada com o título no mesmo eixo
+vertical, em vez do caractere de seta com baseline diferente.
 
 ## Rodar
 
