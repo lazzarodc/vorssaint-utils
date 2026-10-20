@@ -42,6 +42,12 @@ Experimento atual: nas linhas de sessão, retirar o texto do estado e mostrar s�
 o ponto colorido junto da duração. O nome completo permanece em tooltip e nome
 acessível. Perguntas e aprovações continuam explícitas nos cards de pendência;
 apenas o rótulo repetido das linhas compactas é removido.
+Após feedback de pouca distinção, o verde suave inicial (#89c3ad) foi trocado
+pelo verde de AgentStatus (#4dd966); espera usa o âmbar correspondente (#ffb840).
+Ociosa usa círculo vazado cinza (#8c8c8c), diferente do preenchimento do app atual,
+para distinguir também pela forma. Indicadores principais têm 7 px, com tooltip
+e nome acessível preservados. A paleta inicial era uma escolha do protótipo,
+não uma cópia exata da implementação nativa.
 
 ## Rodar
 
