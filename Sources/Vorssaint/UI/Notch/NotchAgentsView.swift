@@ -181,13 +181,18 @@ struct NotchAgentsView: View {
                 NotchAgentBackButton(action: { page = .sessions }, label: label(.back))
                 Text(label(.limitsAndUsage)).font(.system(size: 11, weight: .semibold))
                 Spacer(minLength: 0)
-                if page == .usage { periodMenu }
+                periodMenu
+                    .opacity(page == .usage ? 1 : 0)
+                    .allowsHitTesting(page == .usage)
+                    .accessibilityHidden(page != .usage)
             }
-            HStack(spacing: 18) {
+            .frame(height: 28)
+            HStack(spacing: 2) {
                 panelTab(text.limitsCard, page: .limits)
                 panelTab(label(.usageAndHistory), page: .usage)
             }
-            .overlay(alignment: .bottom) { Divider() }
+            .padding(3)
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             ScrollView {
                 if page == .limits {
                     VStack(spacing: 0) {
@@ -209,15 +214,22 @@ struct NotchAgentsView: View {
                     grid(usageRows, now: now)
                 }
             }
+            .contentMargins(.trailing, 12, for: .scrollContent)
         }.padding(.horizontal, 3)
     }
 
     private func panelTab(_ title: String, page target: AgentPage) -> some View {
         Button { page = target } label: {
             Text(title).font(.system(size: 10)).foregroundStyle(page == target ? .primary : .secondary)
-                .padding(.vertical, 7)
-                .overlay(alignment: .bottom) { if page == target { Rectangle().fill(.white.opacity(0.8)).frame(height: 2) } }
-        }.buttonStyle(.plain)
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .padding(.horizontal, 8)
+                .frame(maxWidth: .infinity, minHeight: 28)
+                .background(.white.opacity(page == target ? 0.10 : 0),
+                            in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false))
+        .accessibilityAddTraits(page == target ? .isSelected : [])
     }
 
     private var periodMenu: some View {

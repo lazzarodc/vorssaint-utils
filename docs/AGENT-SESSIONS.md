@@ -44,8 +44,12 @@ profiles it summarizes the most constrained reported session window and names
 that account in the tooltip. Missing readings stay unknown; stale readings are
 dimmed and dated in the tooltip. The existing used/remaining preference applies.
 
-The gauge opens **Limits and usage**. Limits shows all configured accounts
-without account dropdowns, including failure/staleness and refresh controls.
+The gauge opens **Limits and usage**. The panel uses full-width segmented tab
+buttons, a fixed-height header that
+reserves the period control's space on both tabs, and a trailing content margin
+inside the scroll view to keep readings clear of the scrollbar.
+Limits shows all configured accounts without account dropdowns, including
+failure/staleness and refresh controls.
 Session/longer-window meters align to provider marks, with percentage and renewal
 on the same row. Codex resets remain explicitly associated with its default
 account, including when only other profiles were added. **Usage and history**
