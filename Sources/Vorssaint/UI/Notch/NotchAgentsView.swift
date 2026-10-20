@@ -127,8 +127,10 @@ struct NotchAgentsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, 6)
                 .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["sessions": geometry.size.height]) })
             }
+            .padding(.horizontal, -6)
             footer(now: now)
                 .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["footer": geometry.size.height]) })
         }

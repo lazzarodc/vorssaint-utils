@@ -12,7 +12,9 @@ Claude hook questions/approvals appear first, even while usage history loads.
 Rows show a provider mark, project/conversation with elapsed time beside its title,
 and activity. Status indicators occupy a fixed column beside the detail chevrons,
 outside the terminal button, so longer elapsed times do not shift them. Row and
-chevron buttons reuse the island's shared hover highlight without scaling.
+chevron buttons share one smoothly animated row highlight without scaling, with
+side insets before the provider mark and after the chevron. Their click actions
+remain separate; moving over the status does not split the highlight.
 Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Only rows between sessions have separators. The main row area opens the external

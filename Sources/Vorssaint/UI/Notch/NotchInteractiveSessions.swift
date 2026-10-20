@@ -36,6 +36,8 @@ struct NotchInteractiveSessionCard: View {
     @State private var replyText = ""
     @State private var sending = false
     @State private var justSent = false
+    @State private var rowHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var approval: ApprovalCenter.Approval? { approvals.pending[agent.id] }
     private var approvalColor: Color { AgentStatus.waiting.color }
@@ -78,7 +80,7 @@ struct NotchInteractiveSessionCard: View {
                         .padding(.vertical, 9).padding(.trailing, 9)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false))
+                    .buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false, highlights: false))
                     .help(sessionString(agent.terminalApp != nil ? .terminal : .conversation))
                     .accessibilityLabel(agent.displayTitle + " · " + sessionString(agent.terminalApp != nil ? .terminal : .conversation))
                     NotchAgentStatusIndicator(status: effectiveStatus)
@@ -86,9 +88,16 @@ struct NotchInteractiveSessionCard: View {
                     Button(action: onShowDetail) {
                         Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
                             .frame(width: 26, height: 42).contentShape(Rectangle())
-                    }.buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false))
+                    }.buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false, highlights: false))
                         .help(sessionString(.conversation)).accessibilityLabel(sessionString(.conversation))
                 }
+                .padding(.horizontal, 6)
+                .background(.white.opacity(rowHovered ? 0.09 : 0),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .contentShape(Rectangle())
+                .onHover { rowHovered = $0 }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: rowHovered)
+                .padding(.horizontal, -6)
                 if approval != nil { approvalBar }
                 else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }
             }
