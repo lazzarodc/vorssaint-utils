@@ -975,12 +975,20 @@ private struct NotchAgentResetsCard: View {
     var body: some View {
         NotchAgentCardChrome {
             VStack(alignment: .leading, spacing: 6) {
-                NotchAgentCardHeader(title: text.resetsCard, symbol: NotchAgentCard.resets.symbol, tint: tint,
-                                     provider: .codex) {
-                    if let summary = resets.summary, summary.available > 0 {
-                        NotchAgentChip(text: summary.available.formatted(.number.locale(locale)), tint: tint)
-                    } else if resets.checking {
-                        ProgressView().controlSize(.mini)
+                HStack(spacing: 6) {
+                    NotchAgentMark(provider: .codex, size: 13, tint: tint)
+                        .frame(width: 17, height: 17)
+                    Text(text.resetsCard).font(.system(size: 10.5, weight: .semibold))
+                    if let summary = resets.summary {
+                        Text(summary.available.formatted(.number.locale(locale)))
+                            .font(.system(size: 11, weight: .semibold)).monospacedDigit()
+                            .foregroundStyle(tint)
+                    }
+                    Spacer(minLength: 6)
+                    if resets.checking { ProgressView().controlSize(.mini) }
+                    if let summary = resets.summary, summary.available > 0,
+                       !resets.redeeming, !confirming, finished == nil {
+                        useButton
                     }
                 }
                 if showsDefaultAccount {
@@ -1029,9 +1037,23 @@ private struct NotchAgentResetsCard: View {
             }
         } else if let summary = resets.summary {
             if summary.available > 0 {
-                // A reset a day from expiring is worth using soon.
-                let soon = summary.nextExpiry.map { $0.timeIntervalSince(now) < 86_400 } ?? false
-                action(summary.nextExpiry.map(expiry) ?? "", tint: soon ? .orange : nil) { useButton }
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(summary.resets) { reset in
+                        HStack(spacing: 6) {
+                            Image(systemName: "hourglass").frame(width: 17)
+                            if let date = reset.expiresAt {
+                                Text(date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale)))
+                                Spacer(minLength: 6)
+                                Text(date.formatted(.relative(presentation: .named).locale(locale)))
+                            } else {
+                                Text("—")
+                            }
+                        }
+                        .font(.system(size: 10)).monospacedDigit()
+                        .foregroundStyle(reset.expiresAt.map { $0.timeIntervalSince(now) < 86_400 } == true ? Color.orange : Color.secondary)
+                        .help(reset.expiresAt.map { $0.formatted(.dateTime.day().month(.wide).year().hour().minute().timeZone().locale(locale)) } ?? "—")
+                    }
+                }
             } else {
                 line(text.resetsNone)
             }
@@ -1058,10 +1080,6 @@ private struct NotchAgentResetsCard: View {
             Spacer(minLength: 4)
             HStack(spacing: 6) { buttons() }
         }
-    }
-
-    private func expiry(_ date: Date) -> String {
-        text.resetsExpiry(date.formatted(.relative(presentation: .named).locale(locale)))
     }
 
     @ViewBuilder private func outcome(_ outcome: AgentCodexServer.Outcome?) -> some View {

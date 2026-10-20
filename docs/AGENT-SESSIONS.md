@@ -52,8 +52,12 @@ Limits shows all configured accounts without account dropdowns, including
 failure/staleness and refresh controls.
 Session/longer-window meters align to provider marks, with percentage and renewal
 on the same row. Codex resets remain explicitly associated with its default
-account, including when only other profiles were added. **Usage and history**
-contains spending, trend, models, projects and activity. The period selector
+account, including when only other profiles were added.
+The resets header keeps the count beside its title and the use action on the
+same row. Available reset credits list their expiration date/time and relative
+expiry, soonest first; expirations within a day are highlighted. Count-only
+answers do not invent dates. Confirmation and redemption handling are unchanged.
+**Usage and history** contains spending, trend, models, projects and activity. The period selector
 appears only there. Existing visibility and ordering preferences still filter
 and order usage sections; Live now controls the dedicated overview rather than
 its former position between usage cards. The OpenCode/Copilot live summary and
