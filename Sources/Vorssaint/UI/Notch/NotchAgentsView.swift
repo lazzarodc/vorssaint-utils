@@ -104,7 +104,7 @@ struct NotchAgentsView: View {
     }
 
     private func overview(now: Date) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 0) {
                     if interactiveSessions.isEmpty {
@@ -130,7 +130,7 @@ struct NotchAgentsView: View {
         .padding(.horizontal, 3)
         .onPreferenceChange(AgentOverviewHeightKey.self) { heights in
             guard let list = heights["sessions"], let footer = heights["footer"] else { return }
-            let height = list + footer + 4
+            let height = list + footer
             if abs((overviewHeight ?? -1) - height) > 0.5 { overviewHeight = height; syncPresentation() }
         }
     }
