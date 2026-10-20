@@ -38,6 +38,10 @@ identificam o provedor). O gauge permanece à direita. Estado e duração agora
 ocupam a mesma linha em três colunas: ponto, texto e tempo sem quebra. Isso
 substitui a disposição anterior com duração abaixo do estado, reportada como
 visualmente quebrada pelo usuário.
+Experimento atual: nas linhas de sessão, retirar o texto do estado e mostrar só
+o ponto colorido junto da duração. O nome completo permanece em tooltip e nome
+acessível. Perguntas e aprovações continuam explícitas nos cards de pendência;
+apenas o rótulo repetido das linhas compactas é removido.
 
 ## Rodar
 
