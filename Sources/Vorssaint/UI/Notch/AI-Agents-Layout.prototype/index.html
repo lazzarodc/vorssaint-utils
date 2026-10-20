@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- THROWAWAY: three structural variants of native AI Agents, ?variant=A|B|C.
+     No existing web route: the host is SwiftUI, represented here at native dimensions.
+     All data and actions are fictional, in memory, with no connection to the app. -->
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agents · estudo de layout</title>
+<link rel="stylesheet" href="style.css">
+<script src="prototype.js" defer></script>
+<body>
+<header class="study-header"><div><span class="study-brand">Vorssaint</span><span class="study-mark">Protótipo descartável</span></div><span>AI Agents / organização da ilha</span></header>
+<main>
+  <section class="intro"><h1>O que precisa de você vem primeiro.</h1><p>Três maneiras de acompanhar sessões e responder pendências, mantendo consumo e histórico acessíveis.</p></section>
+  <div class="study-layout">
+    <section class="preview-column" aria-label="Prévia interativa da ilha">
+      <div class="preview-toolbar"><label>Cenário <select id="scenario"><option value="attention">Uma aprovação pendente</option><option value="working">Duas sessões trabalhando</option><option value="many">Seis sessões, mesmo projeto</option><option value="critical">Codex perto do limite</option><option value="empty">Nenhuma sessão aberta</option></select></label><label>Largura <select id="width"><option value="560">560 px</option><option value="480">480 px</option></select></label><button id="reset" class="plain">Reiniciar cenário</button></div>
+      <div class="desktop" id="desktop">
+        <div class="menu-bar" aria-hidden="true"><span>◈ &nbsp; Vorssaint &nbsp; Arquivo &nbsp; Editar</span><span>Ter 20 out &nbsp; 10:10</span></div>
+        <div class="island-wrap" id="island-wrap">
+          <div class="island">
+            <div class="camera-band"><span id="band-label">AI Agents</span><span class="camera" aria-hidden="true"><i></i></span><span id="band-count"></span></div>
+            <div id="surface" class="surface" aria-label="Conteúdo de AI Agents"></div>
+          </div>
+          <div class="quick-access" aria-label="Contexto da ilha"><span title="Seções">▦</span><span title="Timer">◷</span><span title="Ajustes">⚙</span></div>
+        </div>
+        <div class="desktop-caption"><span id="dimension-label">560 px · conteúdo de 320 px</span><span>Dados fictícios. Ações só alteram esta simulação.</span></div>
+      </div>
+      <div class="variant-notes"><div><span class="key" id="variant-key">A</span><h2 id="variant-title"></h2></div><p id="variant-description"></p><dl><div><dt>Ganha</dt><dd id="variant-gain"></dd></div><div><dt>Cede</dt><dd id="variant-tradeoff"></dd></div></dl></div>
+    </section>
+    <aside class="reasoning"><h2>Prioridade proposta</h2><p class="muted">Para abrir a ilha, agir e voltar ao trabalho.</p><ol class="priority-list"><li><strong>Pendências</strong><span>Perguntas e permissões que bloqueiam uma sessão.</span></li><li><strong>Sessões</strong><span>Projeto, conversa, estado e última atividade.</span></li><li><strong>Limites e renovações</strong><span>Resumo sempre perto; detalhes quando precisar.</span></li><li><strong>Consumo</strong><span>Tokens e valor equivalente de API.</span></li><li><strong>Análise e histórico</strong><span>Tendência, modelos, projetos e atividade.</span></li></ol><p class="callout">Um limite crítico ganha destaque contextual. Não precisa ocupar o topo o tempo todo.</p><details class="state-details"><summary>Estado da simulação</summary><pre id="state"></pre></details><p id="action-status" role="status" aria-live="polite" class="action-status">Experimente aprovar, abrir uma sessão ou consultar o uso.</p></aside>
+  </div>
+  <section class="inventory"><div class="inventory-heading"><h2>O que existe hoje, e para onde pode ir</h2><p>8 famílias no código. Limites se desdobram por provedor/conta; Live inclui as sessões individuais.</p></div><div class="table-scroll"><table><caption class="sr-only">Inventário dos cards atuais e hierarquia proposta</caption><thead><tr><th>Card atual</th><th>Papel</th><th>Importância para este fluxo</th><th>Reorganização proposta</th></tr></thead><tbody>
+  <tr><th>Live / sessões</th><td>Estado, atividade e interação por conversa. OpenCode/Copilot mantêm resumo de uso ao vivo.</td><td><b>Essencial</b></td><td>Separar a pendência do restante do card; sessões no primeiro nível.</td></tr>
+  <tr><th>Limites</th><td>Janela de sessão, semana, renovação e contas adicionadas.</td><td><b>Alta</b> quando perto do limite</td><td>Resumo compacto + detalhe por conta. Exceções sobem.</td></tr>
+  <tr><th>Resets</th><td>Renovações disponíveis da conta padrão do Codex e expiração.</td><td>Contextual</td><td>Junto do limite do Codex; não precisa de um card sempre separado.</td></tr>
+  <tr><th>Gasto</th><td>Tokens, cache e valor equivalente de API por período.</td><td>Média; alta com alerta de orçamento</td><td>Resumo em Uso; explicitar que não é a fatura da assinatura.</td></tr>
+  <tr><th>Tendência</th><td>Distribuição de uso no período.</td><td>Consulta</td><td>Agrupar com consumo. Não disputar espaço com uma aprovação.</td></tr>
+  <tr><th>Modelos</th><td>Participação de cada modelo no uso.</td><td>Consulta</td><td>Detalhamento de Uso.</td></tr>
+  <tr><th>Projetos</th><td>Distribuição do uso entre projetos.</td><td>Consulta</td><td>Detalhamento de Uso; distinto do projeto de uma sessão aberta.</td></tr>
+  <tr><th>Atividade</th><td>Calendário histórico e dias ativos.</td><td>Baixa na abertura</td><td>Último nível de consulta.</td></tr>
+  </tbody></table></div><p class="source-note">Ordem padrão atual: Limites → Gasto → Live → Tendência → Modelos → Projetos → Atividade → Resets. O usuário já pode reordenar/ocultar cards. As propostas mudam também os agrupamentos e a navegação.</p></section>
+</main>
+<nav id="switcher" class="switcher" aria-label="Alternativas do protótipo" hidden><button id="previous" aria-label="Alternativa anterior">←</button><div><span id="switch-label"></span><small>← → para comparar</small></div><button id="next" aria-label="Próxima alternativa">→</button></nav>
+</body>
+</html>
