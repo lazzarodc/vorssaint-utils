@@ -29,31 +29,16 @@ private func jumpToSession(_ agent: AgentSession) {
 
 struct NotchInteractiveSessionCard: View {
     let agent: AgentSession
-    var selected = false
+    var controlsOnly = false
     let onShowDetail: () -> Void
-
-    private let showLastPrompt = true
-    private let showActivity = true
-    private let showTerminalChip = true
-    private let showTasks = true
-    private let showModel = true
-    private let showGitBranch = true
-    private let showSubagents = true
-    private let fontSize = 11
+    private let fs: CGFloat = 11
     @ObservedObject private var approvals = ApprovalCenter.shared
-    @State private var hovered = false
     @State private var replyText = ""
     @State private var sending = false
     @State private var justSent = false
 
-    private var fs: CGFloat { CGFloat(fontSize) }
     private var approval: ApprovalCenter.Approval? { approvals.pending[agent.id] }
     private var approvalColor: Color { AgentStatus.waiting.color }
-    /// The agent is waiting on you and we can type back into its terminal.
-    private var canReply: Bool {
-        effectiveStatus == .waiting && agent.terminalApp != nil && approval == nil
-    }
-
     /// Live question from the PreToolUse hook — the only real-time source
     /// (the transcript records AskUserQuestion only after it's answered).
     private var liveQuestion: PendingQuestion? { approvals.questions[agent.id]?.question ?? agent.pendingQuestion }
@@ -64,161 +49,38 @@ struct NotchInteractiveSessionCard: View {
         (approval != nil || liveQuestion != nil) ? .waiting : agent.status
     }
 
-    /// A subtle wash of the status color behind the card (idle stays neutral).
-    private var statusWash: Color {
-        switch effectiveStatus {
-        case .working, .waiting: return effectiveStatus.color.opacity(hovered || selected ? 0.14 : 0.10)
-        case .idle:              return .clear
-        }
-    }
-
-    /// Border color: selected wins, otherwise a status tint.
-    private var borderColor: Color {
-        if selected { return Color(red: 0.45, green: 0.62, blue: 1.0).opacity(0.8) }
-        switch effectiveStatus {
-        case .working, .waiting: return effectiveStatus.color.opacity(0.4)
-        case .idle:              return .white.opacity(0.07)
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            NotchAgentGlyph(provider: agent.kind == .claude ? .claude : .codex, size: 20, working: agent.status == .working)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 5) {
-                // Line 1: title · detail button · time
-                HStack(spacing: 8) {
-                    Text(agent.displayTitle)
-                        .font(.system(size: fs + 2, weight: .semibold))
-                        .foregroundStyle(.white.opacity(agent.status == .idle ? 0.6 : 1))
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    Group {
-                        Button(action: onShowDetail) {
-                            Image(systemName: "chevron.right.circle.fill")
-                                .font(.system(size: fs + 2))
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .buttonStyle(.plain)
-                        .help(sessionString(.conversation))
-                        // Grows out of the trailing edge rather than popping in.
-                        .transition(.scale(scale: 0.6, anchor: .trailing)
-                            .combined(with: .opacity))
+    @ViewBuilder var body: some View {
+        if controlsOnly {
+            if approval != nil { approvalBar }
+            else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 9) {
+                    NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
+                        .frame(width: 17, height: 17)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
+                            .font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                        Text(localizedSessionActivity((agent.status == .waiting ? agent.lastMessage : agent.activity) ?? agent.lastPrompt ?? ""))
+                            .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    if agent.terminalApp != nil {
-                        Button { jumpToSession(agent) } label: { Image(systemName: "terminal") }
-                            .buttonStyle(.plain).help(sessionString(.terminal))
-                    }
-                    Text(agent.elapsed)
-                        .font(.system(size: fs - 1, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.35))
-                        .fixedSize()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 7) {
+                        NotchAgentStatusIndicator(status: effectiveStatus)
+                        Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
+                    }.fixedSize(horizontal: true, vertical: false)
+                    Button(action: onShowDetail) {
+                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                            .frame(width: 26, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(.plain).help(sessionString(.conversation)).accessibilityLabel(sessionString(.conversation))
                 }
-
-                // Line 2: when the agent is waiting on you, surface its question;
-                // otherwise show your last message.
-                if agent.status == .waiting, let question = agent.lastMessage, approval == nil {
-                    Text(question)
-                        .font(.system(size: fs))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(3)
-                } else if showLastPrompt, let prompt = agent.lastPrompt {
-                    Text(sessionString(.you) + ": " + prompt)
-                        .font(.system(size: fs))
-                        .foregroundStyle(.white.opacity(0.45))
-                        .lineLimit(2)
-                }
-
-                // Line 3: live status on the left, chips on the right
-                HStack(alignment: .center, spacing: 8) {
-                    statusLine
-                    Spacer(minLength: 8)
-                    chips
-                }
-                .padding(.top, 1)
-
-                // Task checklist from the agent's todo list
-                if showTasks, !agent.todos.isEmpty {
-                    SessionTasksSection(todos: agent.todos, compact: true)
-                        .padding(.top, 3)
-                }
-
-                // Fan-out subagents (only interesting while any is running)
-                if showSubagents, agent.subagents.contains(where: { !$0.done }) {
-                    SessionSubagentsSection(subagents: agent.subagents, compact: true)
-                        .padding(.top, 3)
-                }
-
-                // Pending permission request → answer from the island.
-                if approval != nil {
-                    approvalBar
-                        .padding(.top, 3)
-                } else if let question = liveQuestion, agent.terminalApp != nil {
-                    // Structured question, live from the PreToolUse hook —
-                    // stays up until the answer lands (PostToolUse / busy).
-                    questionBar(question)
-                        .padding(.top, 3)
-                } else if canReply, hovered || selected {
-                    // Free-text question → answer inline without leaving.
-                    replyBar
-                        .padding(.top, 3)
-                        // Unfurls downward instead of snapping the card taller.
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .offset(y: -6)),
-                            removal: .opacity
-                        ))
-                }
+                if approval != nil { approvalBar }
+                else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }
             }
+            .padding(.vertical, 9)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(.white.opacity(selected ? 0.08 : hovered ? 0.06 : 0.03))
-                .overlay(  // a wash of the status color so the card reads at a glance
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(statusWash)
-                )
-                .overlay(  // specular sheen along the top edge, only while hovered
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: [.white.opacity(0.07), .clear],
-                            startPoint: .top, endPoint: .center))
-                        .opacity(hovered ? 1 : 0)
-                )
-        )
-        .overlay(  // status-tinted left accent bar — elongates as you hover
-            HStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(effectiveStatus.color.opacity(effectiveStatus == .idle ? 0.3 : 0.9))
-                    .frame(width: hovered || selected ? 3.5 : 3)
-                    .padding(.vertical, hovered || selected ? 6 : 10)
-                Spacer(minLength: 0)
-            }
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(borderColor, lineWidth: selected || approval != nil ? 1.5 : 1)
-        )
-        // Lift: a scale small enough to stay crisp, plus a shadow that gives the
-        // card somewhere to lift *from*. Both ride the same spring as the chrome.
-        .shadow(color: .black.opacity(hovered ? 0.30 : 0),
-                radius: hovered ? 11 : 0, y: hovered ? 4 : 0)
-        .scaleEffect(hovered ? 1.012 : 1, anchor: .center)
-        .animation(hoverSpring, value: hovered)
-        .onHover { hovered = $0 }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if agent.terminalApp != nil { jumpToSession(agent) }
-            else { onShowDetail() }
-        }
-        .pointingHandCursor(hovered)
     }
-
-    /// Quick and fully damped — the highlight tracks the cursor without any
-    /// bounce, which is what makes it read as responsive rather than springy.
-    private var hoverSpring: Animation { .spring(response: 0.30, dampingFraction: 0.86) }
 
     /// "Needs approval: Bash" + Approve / Always / Deny, answering the
     /// terminal prompt (1 / 2 / 3) without leaving the island.
@@ -266,7 +128,7 @@ struct NotchInteractiveSessionCard: View {
                 .onSubmit(sendReply)
                 .simultaneousGesture(TapGesture().onEnded { NotchService.shared.presentationWindow?.makeKey() })
             Button(action: sendReply) {
-                Image(systemName: justSent ? "checkmark.circle.fill" : "arrow.up.circle.fill")
+                Image(systemName: justSent ? "checkmark" : "arrow.up")
                     .font(.system(size: 16))
                     .foregroundStyle(justSent ? AgentStatus.working.color
                         : replyText.trimmingCharacters(in: .whitespaces).isEmpty
@@ -361,69 +223,7 @@ struct NotchInteractiveSessionCard: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { justSent = false }
     }
 
-    /// Chips drop least-important-first when the row runs out of width, so
-    /// they never squeeze the status text into vertical wrapping.
-    private var chips: some View {
-        ViewThatFits(in: .horizontal) {
-            chipRow(model: showModel, branch: showGitBranch, terminal: showTerminalChip)
-            chipRow(model: showModel, branch: showGitBranch, terminal: false)
-            chipRow(model: false, branch: showGitBranch, terminal: false)
-            chipRow(model: false, branch: false, terminal: false)
-        }
-    }
 
-    private func chipRow(model: Bool, branch: Bool, terminal: Bool) -> some View {
-        HStack(spacing: 4) {
-            if agent.bypassPermissions {
-                SessionChip(text: "BYPASS",
-                     textColor: Color(red: 1.0, green: 0.5, blue: 0.5),
-                     background: Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.15))
-            }
-            SessionChip(text: agent.kind.displayName,
-                 textColor: .white.opacity(0.85),
-                 background: agent.kind.color.opacity(0.25))
-            if model, let name = agent.modelDisplay {
-                SessionChip(text: name, textColor: .white.opacity(0.75), background: .white.opacity(0.08))
-            }
-            if branch, let name = agent.gitBranch {
-                // Long branch names would crowd out the status line.
-                SessionChip(text: name.count > 16 ? name.prefix(15) + "…" : name,
-                     textColor: .white.opacity(0.65), background: .white.opacity(0.08),
-                     icon: "arrow.triangle.branch")
-            }
-            if terminal, let app = agent.terminalApp {
-                SessionChip(text: app, textColor: .white.opacity(0.65), background: .white.opacity(0.08))
-            }
-            if let host = agent.remoteHost {
-                SessionChip(text: host, textColor: Color(red: 0.55, green: 0.80, blue: 1.0),
-                     background: Color(red: 0.3, green: 0.55, blue: 0.9).opacity(0.18),
-                     icon: "network")
-            }
-        }
-        .fixedSize()
-    }
-
-    @ViewBuilder
-    private var statusLine: some View {
-        if effectiveStatus == .working, showActivity, let activity = agent.activity {
-            Text(localizedSessionActivity(activity))
-                .font(.system(size: fs, weight: .medium))
-                .foregroundStyle(Color(red: 0.45, green: 0.62, blue: 1.0))
-                .lineLimit(1)
-        } else if effectiveStatus == .waiting {
-            Text(sessionString(.waiting))
-                .font(.system(size: fs, weight: .medium))
-                .foregroundStyle(AgentStatus.waiting.color.opacity(0.9))
-                .lineLimit(1)
-                .fixedSize()
-        } else {
-            Text(sessionStatusLabel(effectiveStatus))
-                .font(.system(size: fs, weight: .medium))
-                .foregroundStyle(.white.opacity(0.3))
-                .lineLimit(1)
-                .fixedSize()
-        }
-    }
 }
 
 /// Pointing-hand cursor tied to a hover flag. Tracks its own push so it always
@@ -478,30 +278,6 @@ private struct SessionApprovalButton: View {
     }
 }
 
-private struct SessionChip: View {
-    let text: String
-    let textColor: Color
-    let background: Color
-    var icon: String?
-
-    var body: some View {
-        HStack(spacing: 2.5) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 8, weight: .semibold))
-            }
-            Text(text)
-        }
-        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-        .foregroundStyle(textColor)
-        .lineLimit(1)
-        .fixedSize()
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(Capsule().fill(background))
-    }
-}
-
 // MARK: - Session detail (click a card)
 
 struct NotchInteractiveSessionDetail: View {
@@ -513,83 +289,65 @@ struct NotchInteractiveSessionDetail: View {
     @State private var sending = false
     @State private var justSent = false
 
+    @ObservedObject private var approvals = ApprovalCenter.shared
+    @ObservedObject private var l10n = L10n.shared
+    private var hasApproval: Bool { approvals.pending[agent.id] != nil }
+    private var hasQuestion: Bool { approvals.questions[agent.id] != nil || agent.pendingQuestion != nil }
+    private var needsResponseControl: Bool { hasApproval || hasQuestion }
+    private var effectiveStatus: AgentStatus { needsResponseControl ? .waiting : agent.status }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .frame(width: 22, height: 22)
-                        .background(Circle().fill(.white.opacity(0.1)))
-                }
-                .buttonStyle(.plain)
-
-                NotchAgentGlyph(provider: agent.kind == .claude ? .claude : .codex, size: 16, working: agent.status == .working)
-
-                Text(agent.displayTitle)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-
-                Spacer()
-
-                SessionChip(text: agent.kind.displayName,
-                     textColor: .white.opacity(0.85),
-                     background: agent.kind.color.opacity(0.28))
+                NotchAgentBackButton(action: onBack, label: NotchAgentStrings.panel(.back, language: l10n.language))
+                Text(agent.displayTitle).font(.system(size: 11, weight: .semibold)).lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
+                    .frame(width: 17, height: 17).help(agent.kind.displayName)
+                NotchAgentStatusIndicator(status: effectiveStatus)
+                Text(agent.elapsed).font(.system(size: 9)).foregroundStyle(.secondary).monospacedDigit().fixedSize()
+            }
+            HStack(spacing: 8) {
+                Text([agent.cwdDisplay, agent.gitBranch, agent.modelDisplay].compactMap { $0 }.joined(separator: " · "))
+                    .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                if agent.bypassPermissions { Text("BYPASS").font(.system(size: 9, weight: .semibold)).foregroundStyle(.orange) }
+                Spacer(minLength: 0)
                 if let terminal = agent.terminalApp {
-                    Button {
-                        jumpToSession(agent)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(terminal)
-                            Image(systemName: "arrow.up.forward")
-                                .font(.system(size: 7, weight: .bold))
+                    Button { jumpToSession(agent) } label: {
+                        Image(systemName: "terminal").font(.system(size: 12)).frame(width: 26, height: 24)
+                    }.buttonStyle(.plain).help(sessionString(.terminal) + " · " + terminal)
+                        .accessibilityLabel(sessionString(.terminal) + " · " + terminal)
+                }
+            }
+            Divider()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if agent.transcriptPath == nil { fallbackInfo } else { transcript }
+                        if hasQuestion, !hasApproval {
+                            NotchInteractiveSessionCard(agent: agent, controlsOnly: true, onShowDetail: {})
                         }
-                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(.white.opacity(0.09)))
-                    }
-                    .buttonStyle(.plain)
-                    .help(sessionString(.terminal) + " · " + terminal)
+                        if let plan = agent.plan { SessionPlanSection(markdown: plan) }
+                        if !agent.todos.isEmpty { SessionTasksSection(todos: agent.todos) }
+                        if !agent.subagents.isEmpty { SessionSubagentsSection(subagents: agent.subagents) }
+                        if agent.status == .working, let activity = agent.activity {
+                            Text(localizedSessionActivity(activity)).font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .onChange(of: messages) { _, new in
+                    if let last = new.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
-            .padding(.horizontal, 4)
-
-            if agent.transcriptPath == nil {
-                fallbackInfo
-            } else {
-                transcript
-            }
-
-            if let plan = agent.plan {
-                SessionPlanSection(markdown: plan)
-            }
-
-            if !agent.todos.isEmpty {
-                SessionTasksSection(todos: agent.todos)
-            }
-
-            if !agent.subagents.isEmpty {
-                SessionSubagentsSection(subagents: agent.subagents)
-            }
-
-            if agent.status == .working, let activity = agent.activity {
-                HStack(spacing: 5) {
-                    ProgressView().controlSize(.mini).tint(.white)
-                    Text(localizedSessionActivity(activity))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color(red: 0.40, green: 0.58, blue: 1.0))
-                }
-                .padding(.horizontal, 6)
-            }
-
-            if agent.terminalApp != nil {
+            if hasApproval {
+                Divider()
+                NotchInteractiveSessionCard(agent: agent, controlsOnly: true, onShowDetail: {})
+            } else if !hasQuestion, agent.terminalApp != nil {
+                Divider()
                 replyField
             }
         }
+        .padding(.horizontal, 3)
         .onAppear(perform: load)
         .onChange(of: agent) { _, _ in load() }
     }
@@ -604,19 +362,19 @@ struct NotchInteractiveSessionDetail: View {
                 .onSubmit(sendReply)
                 .simultaneousGesture(TapGesture().onEnded { NotchService.shared.presentationWindow?.makeKey() })
             Button(action: sendReply) {
-                Image(systemName: justSent ? "checkmark.circle.fill" : "arrow.up.circle.fill")
-                    .font(.system(size: 18))
+                Image(systemName: justSent ? "checkmark" : "arrow.up")
+                    .font(.system(size: 14)).frame(width: 26, height: 26)
                     .foregroundStyle(justSent ? AgentStatus.working.color
                         : replyText.isEmpty ? .white.opacity(0.3) : .white.opacity(0.9))
             }
             .buttonStyle(.plain)
             .disabled(sending || replyText.isEmpty)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(.white.opacity(0.06)))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(.white.opacity(0.08), lineWidth: 1))
     }
 
@@ -638,42 +396,23 @@ struct NotchInteractiveSessionDetail: View {
     }
 
     private var transcript: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(messages) { message in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(message.isUser ? sessionString(.you) : agent.kind.displayName)
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundStyle(message.isUser ? .white.opacity(0.4) : agent.kind.color)
-                            Text(message.text)
-                                .font(.system(size: 11.5))
-                                .foregroundStyle(.white.opacity(message.isUser ? 0.6 : 0.9))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .id(message.id)
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(messages) { message in
+                VStack(alignment: .leading, spacing: 4) {
+                    if message.isUser {
+                        Text(sessionString(.you)).font(.system(size: 9)).foregroundStyle(.secondary)
+                    } else {
+                        NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
+                            .frame(width: 17, height: 17).accessibilityLabel(agent.kind.displayName)
                     }
-                    if messages.isEmpty {
-                        Text(sessionString(.noConversation))
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.4))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                    }
-                }
-                .padding(10)
+                    Text(message.text).font(.system(size: 11)).foregroundStyle(.white.opacity(message.isUser ? 0.7 : 0.9))
+                        .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                }.id(message.id)
             }
-            .frame(maxHeight: 380)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.white.opacity(0.04)))
-            .onChange(of: messages) { _, new in
-                if let last = new.last { proxy.scrollTo(last.id, anchor: .bottom) }
+            if messages.isEmpty {
+                Text(sessionString(.noConversation)).font(.system(size: 11)).foregroundStyle(.secondary).padding(.vertical, 12)
             }
-            .onAppear {
-                if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
-            }
-        }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var fallbackInfo: some View {

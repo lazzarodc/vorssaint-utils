@@ -24,16 +24,11 @@ func agentLimitTint(_ provider: AgentProvider, usedFraction: Double) -> Color {
     return provider.tint
 }
 
-/// A card on the AI page: the same surface as the island's system cards.
+/// Flat usage section; the island supplies its surrounding chrome.
 struct NotchAgentCardChrome<Content: View>: View {
     @ViewBuilder let content: Content
-
     var body: some View {
-        content
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .modifier(NotchControlSurface(cornerRadius: 18, interactive: false))
+        content.padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
@@ -330,10 +325,9 @@ struct NotchAgentHeatmap: View {
     }
 }
 
-/// Each agent's own mark, taken from its maker's app on this Mac: the
-/// monochrome image the app shows in the menu bar, or else the app's icon.
-/// None of that artwork ships with Vorssaint, so a Mac without the app
-/// keeps a symbol. Looked up once; the strip redraws every second.
+/// Claude/Codex marks retain the reference artwork under its MIT attribution.
+/// Other providers use their installed app's menu mark or icon, then a symbol.
+/// Looked up once; the strip redraws every second.
 enum AgentMarks {
     enum Mark {
         /// Drawn in the agent's color, like the symbol it replaces.
@@ -351,6 +345,14 @@ enum AgentMarks {
     }
 
     private static func lookUp(_ provider: AgentProvider) -> Mark? {
+        let asset: String?
+        switch provider {
+        case .claude: asset = "agent-claude"
+        case .codex: asset = "agent-openai"
+        default: asset = nil
+        }
+        if let asset, let url = Bundle.main.url(forResource: asset, withExtension: "png", subdirectory: "Images"),
+           let image = NSImage(contentsOf: url) { return .icon(image) }
         for identifier in provider.appIdentifiers {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) else { continue }
             if let bundle = Bundle(url: url) {
@@ -422,5 +424,33 @@ struct NotchAgentMark: View {
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(tint ?? provider.tint)
         }
+    }
+}
+
+
+/// Shared alignment and hit target for both AI Agents detail panels.
+struct NotchAgentBackButton: View {
+    let action: () -> Void
+    let label: String
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left").font(.system(size: 11, weight: .semibold))
+                .frame(width: 26, height: 24).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).foregroundStyle(.secondary).help(label).accessibilityLabel(label)
+    }
+}
+
+struct NotchAgentStatusIndicator: View {
+    let status: AgentStatus
+    @ObservedObject private var l10n = L10n.shared
+    private var label: String {
+        NotchAgentStrings.session(status == .working ? .working : status == .waiting ? .waiting : .idle, language: l10n.language)
+    }
+    var body: some View {
+        Circle()
+            .fill(status == .idle ? .clear : status.color)
+            .overlay { if status == .idle { Circle().strokeBorder(status.color, lineWidth: 1.5) } }
+            .frame(width: 7, height: 7).help(label).accessibilityLabel(label)
     }
 }

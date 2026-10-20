@@ -1736,3 +1736,32 @@ extension NotchAgentStrings {
         .zhHK: "聲音|啟用音效|音量|工作階段開始|工作完成|工作繼續|需要批准|靜音時段|在此時段內將事件聲音靜音，支援跨夜。仍可試聽。|開始|結束|我的聲音|加入聲音…|試聽|移除|無法更新聲音檔案。|批准提示音需要 Claude 掛鉤。",
     ].mapValues { $0.components(separatedBy: "|") }
 }
+
+// Navigation for the session-first AI Agents page.
+enum NotchAgentPanelText: Int, CaseIterable {
+    case limitsAndUsage, usageAndHistory, back, sessions, pending, noSessions
+}
+
+extension NotchAgentStrings {
+    static func panel(_ key: NotchAgentPanelText, language: AppLanguage) -> String {
+        (panelTranslations[language] ?? panelTranslations[.enUS]!)[key.rawValue]
+    }
+
+    static let panelTranslations: [AppLanguage: [String]] = [
+        .enUS: "Limits and usage|Usage and history|Back|%@ sessions|%@ pending|No sessions open",
+        .ptBR: "Limites e uso|Consumo e histórico|Voltar|%@ sessões|%@ pendentes|Nenhuma sessão aberta",
+        .es: "Límites y uso|Consumo e historial|Volver|%@ sesiones|%@ pendientes|No hay sesiones abiertas",
+        .fr: "Limites et utilisation|Consommation et historique|Retour|%@ sessions|%@ en attente|Aucune session ouverte",
+        .de: "Limits und Nutzung|Verbrauch und Verlauf|Zurück|%@ Sitzungen|%@ ausstehend|Keine offenen Sitzungen",
+        .it: "Limiti e utilizzo|Consumo e cronologia|Indietro|%@ sessioni|%@ in attesa|Nessuna sessione aperta",
+        .ja: "上限と使用状況|使用量と履歴|戻る|%@ セッション|%@ 件待機中|開いているセッションはありません",
+        .ko: "한도 및 사용량|사용량 및 기록|뒤로|세션 %@개|%@개 대기 중|열린 세션 없음",
+        .ru: "Лимиты и использование|Расход и история|Назад|Сеансов: %@|Ожидают: %@|Нет открытых сеансов",
+        .uk: "Ліміти та використання|Витрати та історія|Назад|Сеансів: %@|Очікують: %@|Немає відкритих сеансів",
+        .sk: "Limity a využitie|Spotreba a história|Späť|%@ relácií|%@ čakajúcich|Žiadne otvorené relácie",
+        .tr: "Limitler ve kullanım|Tüketim ve geçmiş|Geri|%@ oturum|%@ bekliyor|Açık oturum yok",
+        .zhHans: "限额与用量|用量与历史|返回|%@ 个会话|%@ 个待处理|没有打开的会话",
+        .zhTW: "限額與用量|用量與歷史|返回|%@ 個工作階段|%@ 個待處理|沒有開啟的工作階段",
+        .zhHK: "限額與用量|用量與記錄|返回|%@ 個工作階段|%@ 個待處理|沒有開啟的工作階段",
+    ].mapValues { $0.components(separatedBy: "|") }
+}

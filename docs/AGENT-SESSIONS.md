@@ -7,12 +7,41 @@ Process IDs identify cards, so sessions in the same project remain separate.
 Usage, accounts, limits and completion notifications keep their existing source.
 The monitor deliberately emits no second set of completion notifications.
 
-The Live card preference controls the interactive session list. Sessions follow the existing card order, and appear while usage history is still loading. The host
-bounds the page height and the page scrolls. The conversation chevron opens a
-detail view; Escape returns through the host's page-layer mechanism. Clicking
-a card or its terminal button opens the external terminal. The detail supports
-conversation, tasks, subagents, plans and messages. Cards surface Claude hook
-questions and approvals and offer a quick reply while waiting.
+The Live preference controls the session-first overview. Waiting sessions and
+Claude hook questions/approvals appear first, even while usage history loads.
+Rows show a provider mark, project/conversation, activity, a status indicator and
+elapsed time. Active/waiting indicators are filled green/amber; idle is a hollow
+gray circle. Localized status text remains available to accessibility and hover.
+Only rows between sessions have separators. The chevron opens a separate detail;
+terminal access is an icon in that detail. Escape returns through the host's
+page-layer mechanism. Detail headers and the reply/approval area stay visible
+while the conversation scrolls. Long structured questions scroll with the
+conversation so every option and its custom reply remain reachable. Tasks,
+subagents and plans remain available there.
+
+The overview uses its intrinsic content height up to the configured island
+budget, with a fixed footer. The footer shows per-provider limit readings and
+renewal times, with provider icons and a plain gauge button. With multiple Codex
+profiles it summarizes the most constrained reported session window and names
+that account in the tooltip. Missing readings stay unknown; stale readings are
+dimmed and dated in the tooltip. The existing used/remaining preference applies.
+
+The gauge opens **Limits and usage**. Limits shows all configured accounts
+without account dropdowns, including failure/staleness and refresh controls.
+Session/longer-window meters align to provider marks, with percentage and renewal
+on the same row. Codex resets remain explicitly associated with its default
+account, including when only other profiles were added. **Usage and history**
+contains spending, trend, models, projects and activity. The period selector
+appears only there. Existing visibility and ordering preferences still filter
+and order usage sections; Live now controls the dedicated overview rather than
+its former position between usage cards. The OpenCode/Copilot live summary and
+all existing accounting/notification services remain in use.
+
+Layout reference: approved throwaway prototype on branch
+`prototype/ai-agents-layout`, commit `75b7236c`. Prototype code stays off main;
+its fictitious account/session data is not used by the native app. Claude/Codex
+marks are copied from the MIT reference assets under `Resources/Images`, with
+attribution in `Resources/AgentsIsland-LICENSE.txt`.
 
 ## Claude hook
 

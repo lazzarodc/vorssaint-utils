@@ -11,6 +11,11 @@ enum NotchAgentTests {
             suite.expect(translations.count == NotchSessionText.allCases.count && translations.allSatisfy { !$0.isEmpty },
                          "interactive session text covers every label in \(language.rawValue)")
         }
+        for language in AppLanguage.allCases {
+            suite.expect(NotchAgentStrings.panelTranslations[language]?.count == NotchAgentPanelText.allCases.count
+                         && NotchAgentStrings.panelTranslations[language]?.allSatisfy { !$0.isEmpty } == true,
+                         "session-first navigation is localized in \(language.rawValue)")
+        }
         let layout = NotchAgentSupport.rowsAroundSessions(cards: [.spend, .live, .limits],
                                                          providers: [.codex, .copilot], codexAccounts: [], width: 500)
         suite.expect(layout.before.flatMap { $0 }.map(\.card) == [.spend]
@@ -3220,6 +3225,11 @@ enum NotchAgentTests {
                         && geometry.expandedSize(module: .agents, agentsHeight: 0).height
                         == geometry.headerTopInset + geometry.headerChromeHeight + NotchLayout.emptyHeight,
                      "a short set of cards leaves a short island and a long one scrolls inside the budget")
+        suite.expect(geometry.expandedSize(module: .agents, panel: true, agentsHeight: 48).height
+                        > geometry.expandedSize(module: .agents, agentsHeight: 48).height
+                     && geometry.expandedSize(module: .agents, panel: true, agentsHeight: 900).height
+                        == geometry.headerTopInset + geometry.headerChromeHeight + geometry.pageBudget,
+                     "an agent detail keeps reading room independently of a short or crowded session list")
         let strip = geometry.compactAgentGeometry(wing: 72)
         suite.expect(!strip.compactActivityUsesFooter && strip.compactActivityWingWidth == 72,
                      "a working agent stays beside the camera")

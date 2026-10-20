@@ -3,15 +3,27 @@
 
 import SwiftUI
 
-/// The AI page: cards the person picked, paired across the strip.
+private enum AgentPage: Equatable { case sessions, limits, usage }
+
+private struct AgentOverviewHeightKey: PreferenceKey {
+    static let defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+/// Session-first overview, with limits and history one level away.
 struct NotchAgentsView: View {
     let size: CGSize
     @ObservedObject private var monitor = AgentMonitor.shared
-    @State private var selectedSession: Int32?
+    @ObservedObject private var approvals = ApprovalCenter.shared
     @ObservedObject private var usage = AgentUsageService.shared
     @ObservedObject private var accounts = CodexProfileLimitsService.shared
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.notchSettingsPreview) private var preview
+    @State private var selectedSession: Int32?
+    @State private var page: AgentPage = .sessions
+    @State private var overviewHeight: CGFloat?
     @AppStorage(DefaultsKey.notchAgentsPeriod) private var period = AgentPeriod.today.rawValue
     @AppStorage(DefaultsKey.notchAgentsLimitDisplay) private var display = NotchAgentLimitDisplay.remaining.rawValue
     @AppStorage(DefaultsKey.notchAgentsCardOrder) private var cardOrder = ""
@@ -23,150 +35,226 @@ struct NotchAgentsView: View {
 
     private var text: NotchAgentStrings { FeatureStrings.notchAgents(l10n.language) }
     private var chosenPeriod: AgentPeriod { AgentPeriod(rawValue: period) ?? .today }
-
-    /// The Codex homes the person added, each with a card in the Limits
-    /// card's place, so none while that card is hidden.
+    private func label(_ key: NotchAgentPanelText) -> String { NotchAgentStrings.panel(key, language: l10n.language) }
     private var codexAccounts: [CodexProfileLimitsState] {
         _ = (codex, hiddenCards)
         return NotchAgentSupport.showsCodexAccounts() ? accounts.states : []
     }
-
-    /// Only agents that left something on this Mac, or whose accounts were
-    /// added, get cards.
     private var providers: [AgentProvider] {
-        [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil].compactMap { $0 }
-            .filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty) }
+        [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil]
+            .compactMap { $0 }.filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty) }
     }
-
-    private var sessionRows: (before: [[NotchAgentTile]], after: [[NotchAgentTile]]) {
-        _ = (cardOrder, hiddenCards)
-        return NotchAgentSupport.rowsAroundSessions(cards: NotchAgentSupport.cards(), providers: providers,
-                                                    codexAccounts: codexAccounts.map(\.id), width: size.width)
+    private var cards: [NotchAgentCard] { _ = (cardOrder, hiddenCards); return NotchAgentSupport.cards() }
+    private var interactiveSessions: [AgentSession] {
+        guard cards.contains(.live) else { return [] }
+        return monitor.agents.sorted {
+            let left = needsAttention($0), right = needsAttention($1)
+            return left != right ? left : $0.id < $1.id
+        }
     }
-
+    private func needsAttention(_ agent: AgentSession) -> Bool {
+        agent.status == .waiting || approvals.pending[agent.id] != nil || approvals.questions[agent.id] != nil || agent.pendingQuestion != nil
+    }
     private var legacyProviders: [AgentProvider] { providers.filter { $0 == .opencode || $0 == .copilot } }
-    private var showsLegacyLive: Bool { NotchAgentSupport.cards().contains(.live) && !legacyProviders.isEmpty }
-    private var rows: [[NotchAgentTile]] { sessionRows.before + sessionRows.after }
+    private var limitTiles: [NotchAgentTile] {
+        cards.contains(.limits) ? NotchAgentSupport.tiles(cards: [.limits], providers: providers, codexAccounts: codexAccounts.map(\.id)) : []
+    }
+    private var usageRows: [[NotchAgentTile]] {
+        NotchAgentSupport.rows(NotchAgentSupport.tiles(cards: cards.filter { ![.limits, .live, .resets].contains($0) }, providers: providers), width: size.width)
+    }
+    private var hasLayer: Bool { page != .sessions || selectedSession != nil }
 
     var body: some View {
-        Group {
-            if let id = selectedSession, let agent = monitor.agents.first(where: { $0.id == id }) {
-                ScrollView {
-                    NotchInteractiveSessionDetail(agent: agent) { selectedSession = nil }
-                        .id(id)
+        TimelineView(.periodic(from: .now, by: 15)) { context in
+            Group {
+                if let id = selectedSession, let agent = monitor.agents.first(where: { $0.id == id }) {
+                    NotchInteractiveSessionDetail(agent: agent) { selectedSession = nil }.id(id)
+                } else if page != .sessions {
+                    panel(now: context.date)
+                } else {
+                    overview(now: context.date)
                 }
-            } else if !usage.snapshot.loaded && codexAccounts.isEmpty && interactiveSessions.isEmpty {
-                VStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text(text.loading).font(.system(size: 11)).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if providers.isEmpty && interactiveSessions.isEmpty {
-                NotchEmptyView(symbol: "sparkles", message: text.empty)
-            } else if rows.isEmpty && interactiveSessions.isEmpty && !showsLegacyLive {
-                NotchEmptyView(symbol: "square.grid.2x2", message: text.noCards)
-            } else {
-                TimelineView(.periodic(from: .now, by: 15)) { context in
-                    ScrollView { pageContent(now: context.date) }
-                        .scrollIndicators(.automatic)
-                }
-                // The period drives several cards, so it sits in the island's
-                // top row, beside the camera, while any of them shows.
-                .notchBand(leading: {
-                    if rows.joined().contains(where: { $0.card.followsPeriod }) { periodMenu }
-                })
             }
+            .notchBand(trailing: {
+                let count = interactiveSessions.filter(needsAttention).count
+                Text(String(format: label(count > 0 ? .pending : .sessions),
+                            (count > 0 ? count : interactiveSessions.count).formatted(.number.locale(l10n.language.formattingLocale()))))
+                    .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+            })
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .environment(\.locale, l10n.language.formattingLocale())
         .onAppear {
-            usage.pageDidAppear(preview: preview)
-            accounts.pageDidAppear(preview: preview)
+            usage.pageDidAppear(preview: preview); accounts.pageDidAppear(preview: preview)
+            syncPresentation()
         }
-        .onChange(of: selectedSession) { _, id in
-            guard !preview else { return }
-            NotchService.shared.setPageLayer(.agents, close: id == nil ? nil : { selectedSession = nil })
-        }
+        .onChange(of: page) { _, _ in syncPresentation() }
+        .onChange(of: selectedSession) { _, _ in syncPresentation() }
         .onChange(of: monitor.agents.map(\.id)) { _, ids in
             if let selectedSession, !ids.contains(selectedSession) { self.selectedSession = nil }
         }
         .onDisappear {
-            if !preview { NotchService.shared.setPageLayer(.agents, close: nil) }
             guard !preview else { return }
-            usage.pageDidDisappear()
-            accounts.pageDidDisappear()
+            NotchService.shared.setPageLayer(.agents, close: nil)
+            NotchService.shared.setAgentsContentHeight(nil)
+            usage.pageDidDisappear(); accounts.pageDidDisappear()
         }
     }
 
-    private var interactiveSessions: [AgentSession] {
-        NotchAgentSupport.cards().contains(.live) ? monitor.agents : []
+    private func syncPresentation() {
+        guard !preview else { return }
+        NotchService.shared.setPageLayer(.agents, close: hasLayer ? {
+            selectedSession = nil; page = .sessions
+        } : nil)
+        NotchService.shared.setAgentsContentHeight(hasLayer ? NotchLayout.pageContentHeight : overviewHeight)
     }
 
-    private func pageContent(now: Date) -> some View {
-        VStack(spacing: NotchAgentSupport.spacing) {
-            if !sessionRows.before.isEmpty { grid(sessionRows.before, now: now) }
-            ForEach(interactiveSessions) { agent in
-                NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }
+    private func overview(now: Date) -> some View {
+        VStack(spacing: 4) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    if interactiveSessions.isEmpty {
+                        Text(label(.noSessions)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity).padding(.vertical, 20)
+                    }
+                    ForEach(Array(interactiveSessions.enumerated()), id: \.element.id) { index, agent in
+                        NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }
+                        if index < interactiveSessions.count - 1 { Divider() }
+                    }
+                    if cards.contains(.live), !legacyProviders.isEmpty {
+                        NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)
+                            .frame(height: NotchAgentSupport.cardHeight)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["sessions": geometry.size.height]) })
             }
-            if showsLegacyLive {
-                NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)
-                    .frame(height: NotchAgentSupport.cardHeight)
-            }
-            if !sessionRows.after.isEmpty { grid(sessionRows.after, now: now) }
-            if !usage.snapshot.loaded { ProgressView().controlSize(.small).padding() }
+            footer(now: now)
+                .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["footer": geometry.size.height]) })
         }
-        .padding(3)
+        .padding(.horizontal, 3)
+        .onPreferenceChange(AgentOverviewHeightKey.self) { heights in
+            guard let list = heights["sessions"], let footer = heights["footer"] else { return }
+            let height = list + footer + 4
+            if abs((overviewHeight ?? -1) - height) > 0.5 { overviewHeight = height; syncPresentation() }
+        }
+    }
+
+    private func footer(now: Date) -> some View {
+        HStack(spacing: 16) {
+            ForEach([AgentProvider.claude, .codex].filter { providers.contains($0) && cards.contains(.limits) }) { provider in
+                summary(provider, now: now)
+            }
+            Spacer(minLength: 4)
+            Button { page = .limits } label: { Image(systemName: "gauge.with.dots.needle.33percent").font(.system(size: 14)).frame(width: 26, height: 24) }
+                .buttonStyle(.plain).help(label(.limitsAndUsage)).accessibilityLabel(label(.limitsAndUsage))
+        }
+        .font(.system(size: 10)).padding(.top, 6)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    private func summary(_ provider: AgentProvider, now: Date) -> some View {
+        let readings: [(String, AgentLimits?)] = provider == .codex && !codexAccounts.isEmpty
+            ? codexAccounts.map { ($0.profile.name, $0.currentLimits(at: now)) }
+            : [(provider.displayName, usage.snapshot.limits[provider])]
+        let windows = readings.compactMap { name, limits -> (String, AgentLimits, AgentLimitWindow)? in
+            guard let limits, let window = NotchAgentSupport.focusedLimit(limits, focus: .session, now: now) else { return nil }
+            return (name, limits, window)
+        }
+        let selected = windows.max { $0.2.usedPercent < $1.2.usedPercent }
+        return HStack(spacing: 5) {
+            NotchAgentMark(provider: provider, size: 13).frame(width: 17, height: 17)
+            if let (_, _, window) = selected {
+                Text(display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent(window.usedFraction)) : text.left(AgentFormat.percent(window.remainingFraction)))
+                    .foregroundStyle(agentLimitTint(provider, usedFraction: window.usedFraction))
+                if let reset = AgentLimitSupport.displayedReset(window, now: now) {
+                    Label((window.estimatedResetsAt == nil ? "" : "≈ ") + AgentFormat.duration(max(60, reset.timeIntervalSince(now)), locale: l10n.language.formattingLocale()), systemImage: "arrow.clockwise")
+                        .labelStyle(NotchAgentInlineLabel()).foregroundStyle(.secondary)
+                }
+
+            } else { Text("—").foregroundStyle(.secondary) }
+        }
+        .lineLimit(1).minimumScaleFactor(0.8).monospacedDigit()
+        .opacity(selected.map { NotchAgentSupport.limitsAreStale($0.1, provider: provider, account: provider == .codex && !codexAccounts.isEmpty, now: now) ? 0.6 : 1 } ?? 1)
+        .help(provider.displayName + (selected.map { " · " + $0.0 + " · " + text.updated($0.1.observedAt.formatted(.relative(presentation: .named))) } ?? ""))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(provider.displayName + (selected.map { " · " + $0.0 } ?? ""))
+        .accessibilityValue(selected.map { display == NotchAgentLimitDisplay.used.rawValue ? text.usedShare(AgentFormat.percent($0.2.usedFraction)) : text.left(AgentFormat.percent($0.2.remainingFraction)) } ?? text.waitingForLimits)
+    }
+
+    private func panel(now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                NotchAgentBackButton(action: { page = .sessions }, label: label(.back))
+                Text(label(.limitsAndUsage)).font(.system(size: 11, weight: .semibold))
+                Spacer(minLength: 0)
+                if page == .usage { periodMenu }
+            }
+            HStack(spacing: 18) {
+                panelTab(text.limitsCard, page: .limits)
+                panelTab(label(.usageAndHistory), page: .usage)
+            }
+            .overlay(alignment: .bottom) { Divider() }
+            ScrollView {
+                if page == .limits {
+                    VStack(spacing: 0) {
+                        ForEach(Array(limitTiles.enumerated()), id: \.element.id) { index, tile in
+                            if let provider = tile.provider {
+                                NotchAgentLimitsCard(provider: provider, snapshot: usage.snapshot, now: now,
+                                    display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text, account: account(tile, now: now))
+
+                            }
+                            if index < limitTiles.count - 1 { Divider() }
+                        }
+                        if providers.contains(.codex), cards.contains(.resets) {
+                            if !limitTiles.isEmpty { Divider() }
+                            NotchAgentResetsCard(now: now, text: text, showsDefaultAccount: !codexAccounts.isEmpty)
+                        }
+                        if limitTiles.isEmpty && !(providers.contains(.codex) && cards.contains(.resets)) { Text(text.noCards).foregroundStyle(.secondary).font(.system(size: 11)).padding(.vertical, 16) }
+                    }
+                } else {
+                    grid(usageRows, now: now)
+                }
+            }
+        }.padding(.horizontal, 3)
+    }
+
+    private func panelTab(_ title: String, page target: AgentPage) -> some View {
+        Button { page = target } label: {
+            Text(title).font(.system(size: 10)).foregroundStyle(page == target ? .primary : .secondary)
+                .padding(.vertical, 7)
+                .overlay(alignment: .bottom) { if page == target { Rectangle().fill(.white.opacity(0.8)).frame(height: 2) } }
+        }.buttonStyle(.plain)
     }
 
     private var periodMenu: some View {
         NotchMenuButton(title: text.period(chosenPeriod), items: AgentPeriod.allCases.map { option in
             NotchMenuItem(title: text.period(option), checked: option == chosenPeriod) { period = option.rawValue }
-        }, cornerRadius: 9) {
-            NotchBandMenuLabel(title: text.period(chosenPeriod))
-        }
+        }, cornerRadius: 9) { NotchBandMenuLabel(title: text.period(chosenPeriod)) }
     }
 
     private func grid(_ rows: [[NotchAgentTile]], now: Date) -> some View {
-        VStack(spacing: NotchAgentSupport.spacing) {
+        VStack(spacing: 0) {
             ForEach(rows, id: \.first?.id) { row in
-                HStack(spacing: NotchAgentSupport.spacing) {
-                    ForEach(row) { tile in card(tile, now: now) }
-                }
-                .frame(height: NotchAgentSupport.height(of: row))
+                HStack(spacing: 12) { ForEach(row) { tile in card(tile, now: now) } }
+                    .frame(height: NotchAgentSupport.height(of: row))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     @ViewBuilder private func card(_ tile: NotchAgentTile, now: Date) -> some View {
         let snapshot = usage.snapshot
-        let shown = chosenPeriod
         switch tile.card {
-        case .limits:
-            if let provider = tile.provider {
-                NotchAgentLimitsCard(provider: provider, snapshot: snapshot, now: now,
-                                     display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text,
-                                     account: account(tile, now: now))
-            }
-        case .spend:
-            NotchAgentSpendCard(snapshot: snapshot, providers: providers, period: shown, text: text)
-        case .live:
-            NotchAgentLiveCard(snapshot: snapshot, providers: legacyProviders, text: text)
-        case .trend:
-            NotchAgentTrendCard(snapshot: snapshot, providers: providers, period: shown, text: text)
-        case .models:
-            NotchAgentShareCard(title: text.modelsCard, symbol: NotchAgentCard.models.symbol,
-                                shares: snapshot.usage(shown).models, byCost: snapshot.usage(shown).fullyPriced, text: text)
-        case .projects:
-            NotchAgentShareCard(title: text.projectsCard, symbol: NotchAgentCard.projects.symbol,
-                                shares: snapshot.usage(shown).projects, byCost: snapshot.usage(shown).fullyPriced, text: text)
-        case .activity:
-            NotchAgentActivityCard(snapshot: snapshot, text: text)
-        case .resets:
-            NotchAgentResetsCard(now: now, text: text, showsDefaultAccount: tile.namesDefaultAccount)
+        case .spend: NotchAgentSpendCard(snapshot: snapshot, providers: providers, period: chosenPeriod, text: text)
+        case .trend: NotchAgentTrendCard(snapshot: snapshot, providers: providers, period: chosenPeriod, text: text)
+        case .models, .projects:
+            NotchAgentShareCard(title: text.card(tile.card), symbol: tile.card.symbol,
+                shares: tile.card == .models ? snapshot.usage(chosenPeriod).models : snapshot.usage(chosenPeriod).projects,
+                byCost: snapshot.usage(chosenPeriod).fullyPriced, text: text)
+        case .activity: NotchAgentActivityCard(snapshot: snapshot, text: text)
+        case .limits, .live, .resets: EmptyView()
         }
     }
-
     private func account(_ tile: NotchAgentTile, now: Date) -> NotchAgentAccount? {
         guard let id = tile.accountID, let state = codexAccounts.first(where: { $0.id == id }) else { return nil }
         let strings = FeatureStrings.codexAccounts(l10n.language)
@@ -247,7 +335,7 @@ private struct NotchAgentLimitsCard: View {
         let windows = windows
         NotchAgentCardChrome {
             VStack(alignment: .leading, spacing: 6) {
-                NotchAgentCardHeader(title: account.map { provider.displayName + " · " + $0.name } ?? provider.displayName,
+                NotchAgentCardHeader(title: account?.name ?? snapshot.plans[provider]?.name ?? "",
                                      symbol: provider.symbol, tint: provider.tint, provider: provider) {
                     HStack(spacing: 4) {
                         if let account {
@@ -290,7 +378,7 @@ private struct NotchAgentLimitsCard: View {
                     estimate
                 } else {
                     meters(windows)
-                    if windows.count == 1 { caption }
+                    caption
                 }
             }
         }
@@ -329,23 +417,15 @@ private struct NotchAgentLimitsCard: View {
                     .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(1)
                     .layoutPriority(1)
-                Group {
-                    if let resets = AgentLimitSupport.displayedReset(window, now: now) {
-                        Label((window.estimatedResetsAt == nil ? "" : "≈ ") + countdown(to: resets),
-                              systemImage: "arrow.clockwise")
-                            .labelStyle(NotchAgentInlineLabel())
-                            .foregroundStyle(.secondary)
-                    }
+                Spacer(minLength: 8)
+                Text(remaining ? text.left(AgentFormat.percent(fraction)) : text.usedShare(AgentFormat.percent(fraction)))
+                    .font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                    .foregroundStyle(tint == provider.tint ? Color.white : tint).fixedSize()
+                if let resets = AgentLimitSupport.displayedReset(window, now: now) {
+                    Label((window.estimatedResetsAt == nil ? "" : "≈ ") + countdown(to: resets), systemImage: "arrow.clockwise")
+                        .labelStyle(NotchAgentInlineLabel()).font(.system(size: 9)).foregroundStyle(.secondary)
+                        .monospacedDigit().fixedSize().frame(minWidth: 65, alignment: .trailing)
                 }
-                .font(.system(size: 9.5))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                Spacer(minLength: 2)
-                Text(AgentFormat.percent(fraction))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(tint == provider.tint ? Color.white : tint)
-                    .contentTransition(.numericText())
             }
             NotchAgentMeter(value: fraction, pace: pace.map { remaining ? 1 - $0.elapsed : $0.elapsed },
                             tint: tint, height: 4)

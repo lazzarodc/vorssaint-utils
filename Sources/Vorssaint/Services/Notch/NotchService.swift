@@ -218,6 +218,7 @@ final class NotchService: ObservableObject {
     /// What a page shows over its own content, such as the mixer's options or
     /// the month grid, and how to close it; Escape closes it before the page.
     private var pageLayers: [NotchModule: () -> Void] = [:]
+    private var reportedAgentsHeight: CGFloat?
     private var trackingMenu = false
     /// The home page's controls as the preferences last saved them, read with
     /// the preferences: the open page's geometry is read on every layout pass.
@@ -825,7 +826,8 @@ final class NotchService: ObservableObject {
         let controls = NotchSupport.controls()
         let sliders = controls.filter(\.isLevel).count
         let shortcuts = controls.filter { !$0.isLevel && $0 != .music }.count
-        return geometry.expandedSize(module: module, detail: detail, panel: panel, detailHeight: detailHeight,
+        return geometry.expandedSize(module: module, detail: detail,
+                                     panel: panel || (module == .agents && pageLayers[.agents] != nil), detailHeight: detailHeight,
                                      shortcutCount: shortcuts,
                                      sliderCount: sliders, controlsHaveMusic: controls.contains(.music), musicHasContent: NotchMusicService.shared.playback != nil,
                                      musicExtraHeight: musicExtraHeight, fileMediaHeight: fileMediaHeight,
@@ -842,6 +844,7 @@ final class NotchService: ObservableObject {
     /// The AI page is as tall as the cards it shows; nil while the logs are
     /// first read, when the page fills the island with its progress.
     private func agentsContentHeight(width: CGFloat) -> CGFloat? {
+        if let reportedAgentsHeight { return reportedAgentsHeight }
         if NotchAgentSupport.cards().contains(.live), !AgentMonitor.shared.agents.isEmpty { return nil }
         let usage = AgentUsageService.shared.snapshot
         let enabled = NotchAgentSupport.providers()
@@ -1267,6 +1270,7 @@ final class NotchService: ObservableObject {
         captureControlsWork?.cancel(); captureControlsWork = nil
         musicDetailVisible = false
         pageLayers.removeAll()
+        reportedAgentsHeight = nil
         clipboardPinnedOnly = false
         panel?.handleScroll = nil
         gesture = NotchGestureSupport()
@@ -1963,6 +1967,14 @@ final class NotchService: ObservableObject {
 
     /// A page reports the layer it shows over its content with how to close
     /// it, and nil once the layer or the page is gone.
+    /// Intrinsic overview height, or the full reading budget of an open panel.
+    func setAgentsContentHeight(_ height: CGFloat?) {
+        guard reportedAgentsHeight != height else { return }
+        reportedAgentsHeight = height
+        objectWillChange.send()
+        refreshPresentation()
+    }
+
     func setPageLayer(_ module: NotchModule, close: (() -> Void)?) {
         pageLayers[module] = close
     }
