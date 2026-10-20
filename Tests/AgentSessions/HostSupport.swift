@@ -14,3 +14,10 @@ enum NotchAgentSupport {
          defaults.bool(forKey: "codex") ? .codex : nil].compactMap { $0 }
     }
 }
+
+final class AgentSessionSoundService {
+    static let shared = AgentSessionSoundService()
+    func update(agents: [AgentSession]) {}
+    func stop() {}
+    func playEvent(_ event: AgentSessionSoundEvent) {}
+}

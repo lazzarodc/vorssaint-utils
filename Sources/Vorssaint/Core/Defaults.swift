@@ -887,6 +887,15 @@ enum DefaultsKey {
     static let notchAgentsLimitThreshold = "notchAgentsLimitThreshold"
     static let notchAgentsDailyBudget = "notchAgentsDailyBudget"
     static let notchAgentsPriceUpdates = "notchAgentsPriceUpdates"
+    static let notchAgentsSoundsEnabled = "notchAgentsSoundsEnabled"
+    static let notchAgentsSoundVolume = "notchAgentsSoundVolume"
+    static let notchAgentsSoundSessionStart = "notchAgentsSoundSessionStart"
+    static let notchAgentsSoundTaskComplete = "notchAgentsSoundTaskComplete"
+    static let notchAgentsSoundAcknowledge = "notchAgentsSoundAcknowledge"
+    static let notchAgentsSoundApprovalNeeded = "notchAgentsSoundApprovalNeeded"
+    static let notchAgentsQuietHoursEnabled = "notchAgentsQuietHoursEnabled"
+    static let notchAgentsQuietHoursStart = "notchAgentsQuietHoursStart"
+    static let notchAgentsQuietHoursEnd = "notchAgentsQuietHoursEnd"
     static let notchEnabled = "notchEnabled"
     static let notchDisplay = "notchDisplay"
     // How the island looks on a display without a camera housing.
@@ -1476,6 +1485,15 @@ enum Defaults {
         DefaultsKey.notchAgentsLimitThreshold: NotchAgentSupport.defaultLimitThreshold,
         DefaultsKey.notchAgentsDailyBudget: 0.0,
         DefaultsKey.notchAgentsPriceUpdates: true,
+        DefaultsKey.notchAgentsSoundsEnabled: true,
+        DefaultsKey.notchAgentsSoundVolume: 0.5,
+        DefaultsKey.notchAgentsSoundSessionStart: "Off",
+        DefaultsKey.notchAgentsSoundTaskComplete: "Glass",
+        DefaultsKey.notchAgentsSoundAcknowledge: "Off",
+        DefaultsKey.notchAgentsSoundApprovalNeeded: "Ping",
+        DefaultsKey.notchAgentsQuietHoursEnabled: false,
+        DefaultsKey.notchAgentsQuietHoursStart: 22 * 60,
+        DefaultsKey.notchAgentsQuietHoursEnd: 8 * 60,
         DefaultsKey.notchLyricsEnabled: true,
         DefaultsKey.notchLyricsOnline: false,
         DefaultsKey.notchBrowserCovers: false,

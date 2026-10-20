@@ -20,6 +20,21 @@ enum NotchAgentTests {
                                                          providers: [.codex], codexAccounts: [], width: 500)
         suite.expect(hidden.before.flatMap { $0 }.map(\.card) == [.spend, .limits] && hidden.after.isEmpty,
                      "hiding interactive sessions retains every usage card")
+        for language in AppLanguage.allCases {
+            suite.expect(NotchAgentStrings.soundTranslations[language]?.count == NotchAgentSoundText.allCases.count,
+                         "every sound setting is translated in \(language.rawValue)")
+        }
+        let soundPreferences = [DefaultsKey.notchAgentsSoundsEnabled, DefaultsKey.notchAgentsSoundVolume,
+                                DefaultsKey.notchAgentsSoundSessionStart, DefaultsKey.notchAgentsSoundTaskComplete,
+                                DefaultsKey.notchAgentsSoundAcknowledge, DefaultsKey.notchAgentsSoundApprovalNeeded,
+                                DefaultsKey.notchAgentsQuietHoursEnabled, DefaultsKey.notchAgentsQuietHoursStart,
+                                DefaultsKey.notchAgentsQuietHoursEnd]
+        suite.expect(Set(soundPreferences).isSubset(of: SettingsBackupSupport.exportKeys()),
+                     "sound preferences participate in settings backup")
+        suite.expect(Defaults.registeredDefaults[DefaultsKey.notchAgentsSoundTaskComplete] as? String == "Glass"
+                     && Defaults.registeredDefaults[DefaultsKey.notchAgentsSoundApprovalNeeded] as? String == "Ping"
+                     && Defaults.registeredDefaults[DefaultsKey.notchAgentsSoundsEnabled] as? Bool == true,
+                     "reference completion and approval sounds are enabled by default")
         // Prices come from the list the app ships, the same file the project publishes.
         let previous = AgentPricing.list
         let shipped = (try? Data(contentsOf: URL(fileURLWithPath: "Resources/agent-prices.json"))).flatMap(AgentPriceList.decode)

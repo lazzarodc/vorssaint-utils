@@ -60,3 +60,28 @@ acceptance still requires checking on the target Mac:
 - Existing usage cards, accounts, notifications and other island tabs remain usable.
 
 No hook installation or live terminal input is part of the automated test suites.
+
+## Session sounds
+
+AI Agents settings include the reference sound mechanism: session start and
+acknowledgement are Off, task completion is Glass, and Claude approval is Ping.
+Sounds are enabled with volume 50%. Each event has a system/custom sound picker
+and preview. Quiet hours default to disabled, with a configurable 22:00–08:00
+interval. Explicit previews bypass quiet hours and the master switch.
+
+Only interactive session transitions trigger these sounds; usage notifications
+keep their existing visual path. Existing sessions stay silent on the first scan
+after launch or resume. Repeated scans of the same state do not repeat a sound.
+Duplicate permission events already pending on the same session do not play twice.
+Disabling AI Agents or hiding Live stops playback and resets the sound baseline.
+
+Imported AIFF, WAV, MP3, M4A and CAF files are copied into the bundle-specific
+private Application Support container under `AgentSounds`. Removing an imported
+sound leaves its original file untouched. Preferences follow settings backups;
+audio files stay on this Mac. Reimport matching custom sound names when restoring
+preferences on another Mac. Developer and normal builds have separate libraries.
+
+`Tools/test-agent-sessions.sh` also checks sound transitions, quiet-hour boundaries,
+volume bounds, audio imports, invalid-file preservation and owned-file removal.
+To check playback manually, use the preview buttons and then a real working →
+waiting turn and a Claude permission hook. No automated test plays audible audio.

@@ -23,11 +23,16 @@ run ProcessNaming ProcessNaming
 run HookSettings HookSettings
 run RolloutAssignment RolloutAssignment
 run CodexPhase Agent TailRead RolloutAssignment CodexSessions
+run Sound Agent AgentSessionSoundSupport
 echo "▸ Monitor"
-swiftc "$source_dir/Agent.swift" "$source_dir/AgentMonitor.swift" \
+swiftc "$source_dir/Agent.swift" "$source_dir/AgentSessionSoundSupport.swift" "$source_dir/AgentMonitor.swift" \
     "$source_dir/ApprovalCenter.swift" "$source_dir/TerminalBridge.swift" \
     "$source_dir/ClaudeSessions.swift" "$source_dir/CodexSessions.swift" \
     "$source_dir/TailRead.swift" "$source_dir/RolloutAssignment.swift" \
     "$source_dir/ProcessNaming.swift" "$source_dir/HookSettings.swift" \
     Tests/AgentSessions/HostSupport.swift Tests/AgentSessions/MonitorTests.swift -o "$work/Monitor"
 "$work/Monitor"
+echo "▸ SoundLibrary"
+swiftc "$source_dir/AgentSessionSoundLibrary.swift" Sources/Vorssaint/Services/PrivateFileStore.swift \
+    Tests/AgentSessions/SoundLibraryTests.swift -o "$work/SoundLibrary"
+"$work/SoundLibrary"

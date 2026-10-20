@@ -51,6 +51,7 @@ final class ApprovalCenter: ObservableObject {
 
     func clearQuestion(pid: Int32) { questions[pid] = nil }
 
+    private var monitoringStartedAt = Date.distantFuture
     private var timer: Timer?
     private static let home = FileManager.default.homeDirectoryForCurrentUser.path
     static let supportDir = home + "/.claude/vorssaint"
@@ -59,6 +60,7 @@ final class ApprovalCenter: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
+        monitoringStartedAt = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.drainSpool()
         }
@@ -67,6 +69,7 @@ final class ApprovalCenter: ObservableObject {
     func stop() {
         timer?.invalidate()
         timer = nil
+        monitoringStartedAt = .distantFuture
         pending = [:]
         questions = [:]
     }
@@ -144,9 +147,13 @@ final class ApprovalCenter: ObservableObject {
                 if spoolFileAge(path) > 30 { try? fm.removeItem(atPath: path) }
                 continue
             }
+            let writtenAt = (try? fm.attributesOfItem(atPath: path))?[.modificationDate] as? Date
+            let announce = AgentSessionSoundPolicy.shouldAnnounceApproval(writtenAt: writtenAt,
+                                                                         monitoringStartedAt: monitoringStartedAt)
             try? fm.removeItem(atPath: path) // matched → consume
             let agent = AgentMonitor.shared.agents.first { $0.id == pid }
             let toolName = tool
+            let isNew = self.pending[pid] == nil
             do {
                 self.pending[pid] = Approval(
                     sessionId: sessionId,
@@ -155,6 +162,7 @@ final class ApprovalCenter: ObservableObject {
                     at: Date(),
                     activityAtCreate: agent?.activity
                 )
+                if isNew, agent != nil, announce { AgentSessionSoundService.shared.playEvent(.approvalNeeded) }
             }
         }
     }

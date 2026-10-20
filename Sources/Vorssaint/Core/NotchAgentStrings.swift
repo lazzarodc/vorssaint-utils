@@ -1706,3 +1706,33 @@ extension NotchAgentStrings {
         .zhHK: "工作中|等候回覆|閒置|查看對話|開啟終端機|批准|一律允許|拒絕|需要你的批准|· 可多選|你|暫無對話|狀態|目錄|執行時間|工作|子代理|已完成|計劃|回覆|Claude 工作階段整合|安裝掛鉤|移除掛鉤|在此顯示 Claude 的問題及權限請求。回覆使用外部終端機，可能需要 macOS 自動化或輔助使用權限。|無法更新掛鉤。請檢查存取權限及 ~/.claude/settings.json 中的 JSON。|請選擇一個選項"
     ].mapValues { $0.components(separatedBy: "|") }
 }
+
+
+enum NotchAgentSoundText: Int, CaseIterable {
+    case title, enabled, volume, started, completed, acknowledged, approvalNeeded
+    case quietHours, quietHint, from, until, mySounds, addSound, preview, remove, fileFailed, hookHint
+}
+
+extension NotchAgentStrings {
+    static func sound(_ key: NotchAgentSoundText, language: AppLanguage) -> String {
+        (soundTranslations[language] ?? soundTranslations[.enUS]!)[key.rawValue]
+    }
+
+    static let soundTranslations: [AppLanguage: [String]] = [
+        .enUS: "Sounds|Enable sound effects|Volume|Session start|Task complete|Task acknowledged|Approval needed|Quiet hours|Silences event sounds during this interval, including overnight. Previews remain available.|From|Until|My sounds|Add sound…|Preview|Remove|Could not update sound files.|The approval sound requires the Claude hook.",
+        .ptBR: "Sons|Ativar efeitos sonoros|Volume|Início da sessão|Tarefa concluída|Tarefa retomada|Permissão pendente|Horário de silêncio|Silencia os sons dos eventos neste intervalo, inclusive durante a madrugada. As prévias continuam disponíveis.|De|Até|Meus sons|Adicionar som…|Ouvir prévia|Remover|Não foi possível atualizar os arquivos de som.|O som de permissão pendente requer o hook do Claude.",
+        .es: "Sonidos|Activar efectos de sonido|Volumen|Inicio de sesión|Tarea completada|Tarea retomada|Permiso pendiente|Horario de silencio|Silencia los eventos durante este intervalo, incluso de noche. Las vistas previas siguen disponibles.|Desde|Hasta|Mis sonidos|Añadir sonido…|Escuchar|Eliminar|No se pudieron actualizar los archivos de sonido.|El sonido de permiso pendiente requiere el hook de Claude.",
+        .fr: "Sons|Activer les effets sonores|Volume|Début de session|Tâche terminée|Tâche reprise|Autorisation requise|Heures de silence|Coupe les sons des événements pendant cet intervalle, même la nuit. Les aperçus restent disponibles.|De|À|Mes sons|Ajouter un son…|Écouter|Supprimer|Impossible de mettre à jour les fichiers audio.|Le son d’autorisation nécessite le hook Claude.",
+        .de: "Töne|Soundeffekte aktivieren|Lautstärke|Sitzungsbeginn|Aufgabe abgeschlossen|Aufgabe fortgesetzt|Genehmigung erforderlich|Ruhezeiten|Schaltet Ereignistöne in diesem Zeitraum auch über Nacht stumm. Vorschauen bleiben verfügbar.|Von|Bis|Meine Töne|Ton hinzufügen…|Anhören|Entfernen|Audiodateien konnten nicht aktualisiert werden.|Der Genehmigungston erfordert den Claude-Hook.",
+        .it: "Suoni|Attiva effetti sonori|Volume|Inizio sessione|Attività completata|Attività ripresa|Autorizzazione richiesta|Orario silenzioso|Disattiva i suoni degli eventi in questo intervallo, anche di notte. Le anteprime restano disponibili.|Da|A|I miei suoni|Aggiungi suono…|Ascolta|Rimuovi|Impossibile aggiornare i file audio.|Il suono di autorizzazione richiede l’hook Claude.",
+        .ja: "サウンド|効果音を有効にする|音量|セッション開始|タスク完了|タスク再開|承認が必要|消音時間|夜間を含め、この時間帯のイベント音を消音します。プレビューは引き続き利用できます。|開始|終了|自分のサウンド|サウンドを追加…|試聴|削除|サウンドファイルを更新できませんでした。|承認音には Claude フックが必要です。",
+        .ko: "사운드|효과음 사용|음량|세션 시작|작업 완료|작업 재개|승인 필요|무음 시간|야간을 포함하여 이 시간 동안 이벤트 소리를 끕니다. 미리 듣기는 계속 사용할 수 있습니다.|시작|종료|내 사운드|사운드 추가…|미리 듣기|제거|사운드 파일을 업데이트하지 못했습니다.|승인 소리를 사용하려면 Claude 훅이 필요합니다.",
+        .ru: "Звуки|Включить звуковые эффекты|Громкость|Начало сеанса|Задача завершена|Задача возобновлена|Требуется разрешение|Тихие часы|Отключает звуки событий в этот период, в том числе ночью. Прослушивание остаётся доступным.|С|До|Мои звуки|Добавить звук…|Прослушать|Удалить|Не удалось обновить звуковые файлы.|Для звука разрешения требуется хук Claude.",
+        .uk: "Звуки|Увімкнути звукові ефекти|Гучність|Початок сеансу|Завдання завершено|Завдання відновлено|Потрібне схвалення|Тихі години|Вимикає звуки подій у цей період, зокрема вночі. Прослуховування залишається доступним.|Від|До|Мої звуки|Додати звук…|Прослухати|Видалити|Не вдалося оновити звукові файли.|Для звуку схвалення потрібен хук Claude.",
+        .sk: "Zvuky|Zapnúť zvukové efekty|Hlasitosť|Začiatok relácie|Úloha dokončená|Úloha obnovená|Vyžaduje schválenie|Tiché hodiny|Stlmí zvuky udalostí počas tohto intervalu aj cez noc. Ukážky zostávajú dostupné.|Od|Do|Moje zvuky|Pridať zvuk…|Prehrať|Odstrániť|Zvukové súbory sa nepodarilo aktualizovať.|Zvuk schválenia vyžaduje hook Claude.",
+        .tr: "Sesler|Ses efektlerini etkinleştir|Ses düzeyi|Oturum başlangıcı|Görev tamamlandı|Görev devam ediyor|Onay gerekiyor|Sessiz saatler|Gece dahil bu aralıkta olay seslerini susturur. Önizlemeler kullanılabilir.|Başlangıç|Bitiş|Seslerim|Ses ekle…|Önizle|Kaldır|Ses dosyaları güncellenemedi.|Onay sesi için Claude hook gerekir.",
+        .zhHans: "声音|启用音效|音量|会话开始|任务完成|任务继续|需要批准|静音时段|在此时段内静音事件声音，支持跨夜。仍可试听。|开始|结束|我的声音|添加声音…|试听|移除|无法更新声音文件。|批准提示音需要 Claude 钩子。",
+        .zhTW: "聲音|啟用音效|音量|工作階段開始|工作完成|工作繼續|需要批准|靜音時段|在此時段內將事件聲音靜音，支援跨夜。仍可試聽。|開始|結束|我的聲音|新增聲音…|試聽|移除|無法更新聲音檔案。|批准提示音需要 Claude 掛鉤。",
+        .zhHK: "聲音|啟用音效|音量|工作階段開始|工作完成|工作繼續|需要批准|靜音時段|在此時段內將事件聲音靜音，支援跨夜。仍可試聽。|開始|結束|我的聲音|加入聲音…|試聽|移除|無法更新聲音檔案。|批准提示音需要 Claude 掛鉤。",
+    ].mapValues { $0.components(separatedBy: "|") }
+}

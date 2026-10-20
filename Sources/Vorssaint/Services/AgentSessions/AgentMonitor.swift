@@ -65,6 +65,7 @@ final class AgentMonitor: ObservableObject {
         timer = nil
         agents = []
         ApprovalCenter.shared.stop()
+        AgentSessionSoundService.shared.stop()
     }
 
     func scanNow() {
@@ -83,6 +84,7 @@ final class AgentMonitor: ObservableObject {
             DispatchQueue.main.async {
                 self.scanning = false
                 guard token == self.generation, !self.enabled.isEmpty else { return }
+                AgentSessionSoundService.shared.update(agents: found)
                 if self.agents != found { self.agents = found }
                 ApprovalCenter.shared.sync(agents: found)
             }

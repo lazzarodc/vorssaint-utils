@@ -115,6 +115,8 @@ struct NotchAgentsSettingsControls: View {
             }
 
             Divider()
+            NotchAgentSoundsSettings()
+            Divider()
             Text(text.alerts).font(.subheadline.weight(.medium))
             switchRow("checkmark.circle", text.finishAlert, isOn: $finishAlert)
             if finishAlert {
