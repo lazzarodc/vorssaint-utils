@@ -195,17 +195,14 @@ struct NotchAgentsView: View {
             .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             ScrollView {
                 if page == .limits {
-                    VStack(spacing: 0) {
-                        ForEach(Array(limitTiles.enumerated()), id: \.element.id) { index, tile in
+                    VStack(spacing: 8) {
+                        ForEach(limitTiles) { tile in
                             if let provider = tile.provider {
                                 NotchAgentLimitsCard(provider: provider, snapshot: usage.snapshot, now: now,
                                     display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text, account: account(tile, now: now))
-
                             }
-                            if index < limitTiles.count - 1 { Divider() }
                         }
                         if providers.contains(.codex), cards.contains(.resets) {
-                            if !limitTiles.isEmpty { Divider() }
                             NotchAgentResetsCard(now: now, text: text, showsDefaultAccount: !codexAccounts.isEmpty)
                         }
                         if limitTiles.isEmpty && !(providers.contains(.codex) && cards.contains(.resets)) { Text(text.noCards).foregroundStyle(.secondary).font(.system(size: 11)).padding(.vertical, 16) }

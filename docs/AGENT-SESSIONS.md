@@ -49,7 +49,8 @@ buttons, a fixed-height header that
 reserves the period control's space on both tabs, and a trailing content margin
 inside the scroll view to keep readings clear of the scrollbar.
 Limits shows all configured accounts without account dropdowns, including
-failure/staleness and refresh controls.
+failure/staleness and refresh controls. Account blocks and resets are separated
+by spacing rather than divider lines, with extra room between blocks.
 Session/longer-window meters align to provider marks, with percentage and renewal
 on the same row. Codex resets remain explicitly associated with its default
 account, including when only other profiles were added.
