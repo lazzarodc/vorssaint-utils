@@ -117,9 +117,8 @@ struct NotchAgentsView: View {
                         Text(label(.noSessions)).font(.system(size: 11)).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 20)
                     }
-                    ForEach(Array(interactiveSessions.enumerated()), id: \.element.id) { index, agent in
+                    ForEach(interactiveSessions) { agent in
                         NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }
-                        if index < interactiveSessions.count - 1 { Divider() }
                     }
                     if cards.contains(.live), !legacyProviders.isEmpty {
                         NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)

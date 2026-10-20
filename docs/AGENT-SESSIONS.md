@@ -17,7 +17,8 @@ side insets before the provider mark and after the chevron. Their click actions
 remain separate; moving over the status does not split the highlight.
 Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
-Only rows between sessions have separators. The main row area opens the external
+Session rows have no separators; the limits footer retains its top divider.
+The main row area opens the external
 terminal; if none is identified, it falls back to details. The chevron is a
 separate button that opens a detail without jumping to the terminal. Approval
 and question controls also remain outside the terminal button. Terminal access
