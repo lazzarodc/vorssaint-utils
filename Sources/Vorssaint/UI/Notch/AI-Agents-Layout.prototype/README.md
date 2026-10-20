@@ -68,6 +68,18 @@ A área rolável reserva seu gutter para não deslocar as barras quando a rolage
 aparece. O cabeçalho usa seta vetorial centralizada com o título no mesmo eixo
 vertical, em vez do caractere de seta com baseline diferente.
 
+Detalhes de sessão revisados: cabeçalho com a mesma seta vetorial sem fundo e
+alinhamento central do painel de limites; provedor por ícone e estado por ponto
+com tooltip, acompanhado do tempo sem quebra. Projeto, branch e modelo ficam
+numa linha compacta que pode envolver em telas estreitas; abrir terminal é uma
+ação por ícone sem fundo e com tooltip do terminal. Conversa usa o mesmo recuo
+de 3 px e gutter estável, sem indentação extra ou borda após a última mensagem.
+Somente a conversa rola: cabeçalho e área de resposta/permissão permanecem
+visíveis. Envio usa seta vetorial sem fundo; permissões conservam descrição e
+ações explícitas, sem confundir o ponto de estado com uma autorização. A troca
+de tela continua como escolhida pelo usuário, sem expansão inline. A variação C
+mantém seu conteúdo lado a lado como alternativa de comparação.
+
 ## Rodar
 
 Na raiz deste worktree:

@@ -72,3 +72,31 @@
 .capacity-content .usage-number small{font-size:9px}
 .capacity-content .legacy{margin-block-start:8px}
 .capacity-content .share-line{font-variant-numeric:tabular-nums}
+
+/* Session detail: same edges and vector navigation, only the transcript scrolls. */
+.session-detail{display:flex;flex-direction:column;flex:1;min-block-size:0;min-inline-size:0}
+.session-detail-head{padding-inline:3px;gap:8px;margin-block-end:3px;flex-shrink:0;align-items:center}
+.session-detail-head .back{display:grid;place-items:center;inline-size:26px;block-size:24px;flex-shrink:0;padding:0;background:transparent;border:0;border-radius:0;color:#aeb9d0}
+.session-detail-head svg,.terminal-icon svg,.session-detail-footer .reply button svg{display:block}
+.session-detail-head strong{display:flex;align-items:center;min-block-size:24px;min-inline-size:0;overflow-wrap:anywhere;line-height:1.2}
+.detail-provider{display:flex;align-items:center;flex-shrink:0}
+.session-detail-state{display:flex;align-items:center;gap:7px;flex-shrink:0;white-space:nowrap}
+.session-detail-state .status-indicator{display:flex;align-items:center;justify-content:center;inline-size:7px}
+.session-detail-state .elapsed{min-inline-size:34px;text-align:end;font-variant-numeric:tabular-nums}
+.session-detail-meta{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:0 3px 6px;border-block-end:1px solid #303238;flex-shrink:0}
+.session-context{display:flex;flex-wrap:wrap;gap:2px 10px;min-inline-size:0}
+.session-context span{overflow-wrap:anywhere}
+.terminal-icon{display:grid;place-items:center;inline-size:26px;block-size:24px;flex-shrink:0;background:transparent;border:0;padding:0;color:#aeb9d0}
+.session-detail-head .back:hover,.terminal-icon:hover{color:#f2f3f6}
+.session-detail .session-transcript{flex:1;margin:0;padding:3px;scrollbar-gutter:stable;line-height:1.5}
+.session-transcript .speaker{font-size:9px;margin-block-end:4px}
+.session-transcript .assistant-speaker{display:flex;align-items:center;block-size:14px}
+.session-transcript p{overflow-wrap:anywhere}
+.session-transcript p:last-child{margin-block-end:7px}
+.session-detail-footer{flex-shrink:0;margin-block-start:4px;padding:6px 3px 0;border-block-start:1px solid #303238}
+.session-detail-footer .reply{margin:0;gap:8px}
+.session-detail-footer .reply input{padding:6px 8px;font-size:10px}
+.session-detail-footer .reply button{display:grid;place-items:center;inline-size:26px;block-size:26px;padding:0;border:0;border-radius:0;background:transparent;color:#c5d2f2}
+.session-detail-footer .reply button:hover{color:#fff}
+.session-detail-footer .detail-approval{padding:8px;border-radius:8px}
+.detail-approval .command{margin-block:7px;padding:6px}

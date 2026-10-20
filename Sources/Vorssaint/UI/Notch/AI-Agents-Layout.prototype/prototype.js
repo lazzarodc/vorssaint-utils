@@ -28,6 +28,7 @@ const critical = () => state.scenario==='critical';
 const codexRemaining = () => critical()?8:76;
 const selectedSession = () => state.sessions.find(s=>s.id===state.selected) ?? sessions()[0];
 const button = (label, action, extra='', classes='pill-btn') => `<button class="${classes}" data-action="${action}" ${extra}>${label}</button>`;
+const backIcon='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
 function empty() {return '<div class="empty-state"><div class="empty-symbol" aria-hidden="true">◇</div><h3>Nenhuma sessão aberta</h3><p>Abra Claude ou Codex no seu terminal. O consumo continua disponível aqui.</p></div>';}
 function alert() {return critical()?`<div class="limit-alert"><span>Codex: 8% da sessão restante. Renova em 1h 14m.</span>${button('Ver','capacity','','text-btn')}</div>`:'';}
 function footer(withRenewals=false) {
@@ -58,14 +59,24 @@ function limitWindow(label,remaining,renewal,tint='') {
   return `<div class="limit-window ${tint}"><div class="window-reading"><span class="window-label">${label}</span><span class="window-value"><b>${remaining}% livre</b><span class="renewal" title="${label}: renova em ${renewal}" aria-label="Renova em ${renewal}">↻ ${renewal}</span></span></div><div class="thin-meter ${tint}" style="--value:${remaining}%" role="meter" aria-label="${label}: percentual livre" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${remaining}"><i></i></div></div>`;
 }
 function capacity() {
-  const backIcon='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
   return `<div class="detail-head capacity-head">${button(backIcon,'back','aria-label="Voltar às sessões" title="Voltar às sessões"','back')}<strong>Limites e uso</strong>${state.capacity==='usage'?periodSelect():''}</div><div class="capacity-tabs" aria-label="Áreas de limites e uso">${button('Limites','capacity-tab','data-tab="limits" aria-pressed="'+(state.capacity==='limits')+'"','capacity-tab')}${button('Consumo e histórico','capacity-tab','data-tab="usage" aria-pressed="'+(state.capacity==='usage')+'"','capacity-tab')}</div><div class="scroll capacity-content">${state.capacity==='limits'?limitsBody():usageBody(false)}</div>`;
 }
 function conversation(s, workspace=false) {
+  if(!workspace) return sessionDetail(s);
   return `${workspace?`<div class="row between"><h3>${mark(s)} ${s.provider}</h3><span class="sub">${s.elapsed}</span></div><h3>${escapeHTML(s.topic)}</h3><p class="sub">${escapeHTML(s.project)} · ${s.terminal}</p>`:`<div class="detail-head">${button('‹','back','aria-label="Voltar às sessões"','back')}<strong>${escapeHTML(s.topic)}</strong>${mark(s)}<span>${s.provider}</span></div><p class="sub">${escapeHTML(s.project)} · ${s.branch} · ${s.terminal}</p>`}
   <div class="conversation"><p><span class="speaker">Você</span>${s.provider==='Claude'?'Valide a integração das sessões e os avisos de áudio.':'Reorganize os cards priorizando as sessões e pendências.'}</p><p><span class="speaker">${s.provider}</span>${s.pending?'Vou executar a suíte de AI Agents para conferir o comportamento.':escapeHTML(s.activity)+'.'}</p></div>
   ${s.pending?`<div class="attention-card"><h3>Permitir Bash?</h3><code class="command">./build.sh --test-suite=agents</code><div class="actions">${button('Permitir uma vez','approve',`data-id="${s.id}"`,'pill-btn approve')}${button('Negar','deny',`data-id="${s.id}"`)}</div></div>`:`<p class="sub">${dot(s)} ${statusText(s)}</p><form class="reply" data-id="${s.id}"><input aria-label="Resposta para ${s.provider}" placeholder="Responder a ${s.provider}…" autocomplete="off" required><button aria-label="Simular envio">↑</button></form>`}
   <div class="row between" style="margin-top:10px"><span class="sub">${s.model} · ${s.branch}</span>${button('Abrir terminal','terminal',`data-id="${s.id}"`,'text-btn')}</div>`;
+}
+function sessionDetail(s) {
+  const terminalIcon='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/></svg>';
+  const sendIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>';
+  return `<section class="session-detail" aria-label="Detalhes de ${escapeHTML(s.topic)}">
+    <div class="detail-head session-detail-head">${button(backIcon,'back','aria-label="Voltar às sessões" title="Voltar às sessões"','back')}<strong>${escapeHTML(s.topic)}</strong><span class="detail-provider" role="img" aria-label="${s.provider}" title="${s.provider}">${mark(s)}</span><span class="session-detail-state sub"><span class="status-indicator" role="img" aria-label="${statusText(s)}" title="${statusText(s)}">${dot(s)}</span><span class="elapsed">${s.elapsed}</span></span></div>
+    <div class="session-detail-meta"><div class="session-context sub"><span title="Projeto">${escapeHTML(s.project)}</span><span title="Branch">${escapeHTML(s.branch)}</span><span title="Modelo">${s.model}</span></div>${button(terminalIcon,'terminal',`data-id="${s.id}" aria-label="Abrir terminal ${s.terminal}" title="Abrir terminal · ${s.terminal}"`,'terminal-icon')}</div>
+    <div class="scroll conversation session-transcript"><p><span class="speaker">Você</span>${s.provider==='Claude'?'Valide a integração das sessões e os avisos de áudio.':'Reorganize os cards priorizando as sessões e pendências.'}</p><p><span class="speaker assistant-speaker" role="img" aria-label="${s.provider}" title="${s.provider}">${mark(s)}</span>${s.pending?'Vou executar a suíte de AI Agents para conferir o comportamento.':escapeHTML(s.activity)+'.'}</p></div>
+    <div class="session-detail-footer">${s.pending?`<div class="attention-card detail-approval"><h3>Permitir Bash?</h3><code class="command">./build.sh --test-suite=agents</code><div class="actions">${button('Permitir uma vez','approve',`data-id="${s.id}"`,'pill-btn approve')}${button('Negar','deny',`data-id="${s.id}"`)}</div></div>`:`<form class="reply" data-id="${s.id}"><input aria-label="Resposta para ${s.provider}" placeholder="Responder…" autocomplete="off" required><button aria-label="Simular envio" title="Enviar resposta simulada">${sendIcon}</button></form>`}</div>
+  </section>`;
 }
 function VariantA() {
   return `${alert()}<div class="scroll queue-list">${state.sessions.length?sessions().map(s=>s.pending?approval(s):sessionLine(s)).join(''):empty()}</div>${footer(true)}`;
@@ -96,7 +107,7 @@ function render() {
   $('#surface').dataset.adaptive=String(adaptive);
   $('#dimension-label').textContent=`${state.width} px solicitados · ${adaptive?'altura adaptativa até 320 px':'conteúdo de 320 px'}${innerWidth<700?' · ajustado à tela':''}`;
   const detail=state.sessions.find(s=>s.id===state.detail);
-  $('#surface').innerHTML=state.area==='capacity'?capacity():detail?`<div class="scroll" style="flex:1">${conversation(detail)}</div>`:({A:VariantA,B:VariantB,C:VariantC}[state.variant])();
+  $('#surface').innerHTML=state.area==='capacity'?capacity():detail?conversation(detail):({A:VariantA,B:VariantB,C:VariantC}[state.variant])();
   $('#surface').querySelectorAll('details').forEach(d=>{d.open=opened.has(d.querySelector('summary').textContent);});
   if(state.notice) $('#action-status').textContent=state.notice;
   showState();
