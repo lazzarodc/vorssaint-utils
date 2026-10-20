@@ -64,27 +64,30 @@ struct NotchInteractiveSessionCard: View {
                             NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
                                 .frame(width: 17, height: 17)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
-                                    .font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                                HStack(spacing: 7) {
+                                    Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
+                                        .font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                                    Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: true, vertical: false)
+                                }
                                 Text(localizedSessionActivity((agent.status == .waiting ? agent.lastMessage : agent.activity) ?? agent.lastPrompt ?? ""))
                                     .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            HStack(spacing: 7) {
-                                NotchAgentStatusIndicator(status: effectiveStatus)
-                                Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
-                            }.fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.vertical, 9).padding(.trailing, 9)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false))
                     .help(sessionString(agent.terminalApp != nil ? .terminal : .conversation))
                     .accessibilityLabel(agent.displayTitle + " · " + sessionString(agent.terminalApp != nil ? .terminal : .conversation))
+                    NotchAgentStatusIndicator(status: effectiveStatus)
+                        .padding(.horizontal, 9)
                     Button(action: onShowDetail) {
                         Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
                             .frame(width: 26, height: 42).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(sessionString(.conversation)).accessibilityLabel(sessionString(.conversation))
+                    }.buttonStyle(NotchButtonStyle(cornerRadius: 6, lifts: false))
+                        .help(sessionString(.conversation)).accessibilityLabel(sessionString(.conversation))
                 }
                 if approval != nil { approvalBar }
                 else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }

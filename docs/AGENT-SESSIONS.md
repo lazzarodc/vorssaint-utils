@@ -9,8 +9,11 @@ The monitor deliberately emits no second set of completion notifications.
 
 The Live preference controls the session-first overview. Waiting sessions and
 Claude hook questions/approvals appear first, even while usage history loads.
-Rows show a provider mark, project/conversation, activity, a status indicator and
-elapsed time. Active/waiting indicators are filled green/amber; idle is a hollow
+Rows show a provider mark, project/conversation with elapsed time beside its title,
+and activity. Status indicators occupy a fixed column beside the detail chevrons,
+outside the terminal button, so longer elapsed times do not shift them. Row and
+chevron buttons reuse the island's shared hover highlight without scaling.
+Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Only rows between sessions have separators. The main row area opens the external
 terminal; if none is identified, it falls back to details. The chevron is a
@@ -28,6 +31,8 @@ and selectable content. In conversations the preview fits each message's height
 and leaves scrolling to the transcript; the Scratchpad retains its original
 independent scrolling. Parsing is repeated only when the message/language changes.
 Task boxes in conversation content are read-only and never edit the transcript.
+Details load up to 12 recent messages from the last 384 KB of the transcript for
+both providers. Consecutive assistant messages are merged before applying the cap.
 
 The overview uses its intrinsic content height up to the configured island
 budget, with a fixed footer. The footer shows per-provider limit readings and
