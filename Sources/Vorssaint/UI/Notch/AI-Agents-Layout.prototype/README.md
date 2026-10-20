@@ -12,6 +12,8 @@ provedor; usar um botão de ícone de medidor no rodapé para abrir limites e us
 com tooltip e nome acessível. Refinamento seguinte: percentual e renovação na
 mesma linha, apenas ↻ e o tempo, sem texto adicional; ícone de limites e uso
 sem fundo ou borda. Uso/histórico continuam acessíveis nesse detalhe.
+O rodapé foi compactado: espaçamento superior de 4 px, intervalos menores entre
+leituras e alvo do ícone de 24 px, mantendo a tipografia.
 
 ## Rodar
 
