@@ -55,29 +55,41 @@ struct NotchInteractiveSessionCard: View {
             else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 9) {
-                    NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
-                        .frame(width: 17, height: 17)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
-                            .font(.system(size: 11, weight: .semibold)).lineLimit(1)
-                        Text(localizedSessionActivity((agent.status == .waiting ? agent.lastMessage : agent.activity) ?? agent.lastPrompt ?? ""))
-                            .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                HStack(spacing: 0) {
+                    Button {
+                        if agent.terminalApp != nil { jumpToSession(agent) }
+                        else { onShowDetail() }
+                    } label: {
+                        HStack(spacing: 9) {
+                            NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
+                                .frame(width: 17, height: 17)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
+                                    .font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                                Text(localizedSessionActivity((agent.status == .waiting ? agent.lastMessage : agent.activity) ?? agent.lastPrompt ?? ""))
+                                    .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            HStack(spacing: 7) {
+                                NotchAgentStatusIndicator(status: effectiveStatus)
+                                Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
+                            }.fixedSize(horizontal: true, vertical: false)
+                        }
+                        .padding(.vertical, 9).padding(.trailing, 9)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    HStack(spacing: 7) {
-                        NotchAgentStatusIndicator(status: effectiveStatus)
-                        Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
-                    }.fixedSize(horizontal: true, vertical: false)
+                    .buttonStyle(.plain)
+                    .help(sessionString(agent.terminalApp != nil ? .terminal : .conversation))
+                    .accessibilityLabel(agent.displayTitle + " · " + sessionString(agent.terminalApp != nil ? .terminal : .conversation))
                     Button(action: onShowDetail) {
                         Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
-                            .frame(width: 26, height: 24).contentShape(Rectangle())
+                            .frame(width: 26, height: 42).contentShape(Rectangle())
                     }.buttonStyle(.plain).help(sessionString(.conversation)).accessibilityLabel(sessionString(.conversation))
                 }
                 if approval != nil { approvalBar }
                 else if let question = liveQuestion, agent.terminalApp != nil { questionBar(question) }
             }
-            .padding(.vertical, 9)
+            .padding(.bottom, approval != nil || liveQuestion != nil ? 9 : 0)
             .contentShape(Rectangle())
         }
     }
@@ -405,8 +417,8 @@ struct NotchInteractiveSessionDetail: View {
                         NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
                             .frame(width: 17, height: 17).accessibilityLabel(agent.kind.displayName)
                     }
-                    Text(message.text).font(.system(size: 11)).foregroundStyle(.white.opacity(message.isUser ? 0.7 : 0.9))
-                        .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                    SessionMarkdownMessage(text: message.text, language: l10n.language).equatable()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }.id(message.id)
             }
             if messages.isEmpty {
@@ -446,6 +458,18 @@ struct NotchInteractiveSessionDetail: View {
                 if loaded != messages { messages = loaded }
             }
         }
+    }
+}
+
+/// Parse only when a message or language changes, not on every monitor scan.
+private struct SessionMarkdownMessage: View, Equatable {
+    let text: String
+    let language: AppLanguage
+    var body: some View {
+        let strings = FeatureStrings.scratchpad(language)
+        MarkdownPreview(blocks: ScratchpadSupport.markdownPreview(text), baseSize: 11,
+                        fitsContent: true, textInset: .zero,
+                        taskStates: (done: strings.taskDone, notDone: strings.taskNotDone))
     }
 }
 

@@ -579,6 +579,9 @@ private struct ScratchpadResizeOverlay: NSViewRepresentable {
 struct MarkdownPreview: NSViewRepresentable {
     let blocks: [ScratchpadMarkdownBlock]
     var baseSize: CGFloat = PlainTextEditor.defaultFontSize
+    /// Messages grow within the conversation scroller; scratchpad keeps its own scroll view.
+    var fitsContent = false
+    var textInset = NSSize(width: 7, height: 2)
     /// How a task's checkbox tells VoiceOver it is done or not.
     let taskStates: (done: String, notDone: String)
     /// Called with the text offset of the box whose checkbox is clicked; the
@@ -590,7 +593,7 @@ struct MarkdownPreview: NSViewRepresentable {
         // answers a click on a checkbox and points its cursor at it.
         let scroll = NSScrollView()
         scroll.drawsBackground = false
-        scroll.hasVerticalScroller = true
+        scroll.hasVerticalScroller = !fitsContent
         scroll.autohidesScrollers = true
         let textView = TaskPreviewTextView(frame: NSRect(origin: .zero, size: scroll.contentSize))
         textView.minSize = NSSize(width: 0, height: scroll.contentSize.height)
@@ -607,7 +610,8 @@ struct MarkdownPreview: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.isRichText = true
-        textView.textContainerInset = NSSize(width: 7, height: 2)
+        textView.textContainerInset = textInset
+        if fitsContent { textView.textContainer?.lineFragmentPadding = 0 }
         textView.linkTextAttributes = [.foregroundColor: NSColor.controlAccentColor]
         context.coordinator.show(blocks, base: baseSize, taskStates: taskStates, in: textView)
         return scroll
@@ -615,9 +619,23 @@ struct MarkdownPreview: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = nsView.documentView as? NSTextView else { return }
+        nsView.hasVerticalScroller = !fitsContent
+        textView.textContainerInset = textInset
+        textView.textContainer?.lineFragmentPadding = fitsContent ? 0 : PlainTextEditor.lineFragmentPadding
         context.coordinator.onToggleTask = onToggleTask
         (textView as? TaskPreviewTextView)?.onToggleTask = onToggleTask
         context.coordinator.show(blocks, base: baseSize, taskStates: taskStates, in: textView)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
+        guard fitsContent, let width = proposal.width, width.isFinite, width > 0,
+              let textView = nsView.documentView as? NSTextView,
+              let container = textView.textContainer, let layout = textView.layoutManager else { return nil }
+        textView.setFrameSize(NSSize(width: width, height: textView.frame.height))
+        container.containerSize = NSSize(width: max(1, width - textInset.width * 2),
+                                         height: CGFloat.greatestFiniteMagnitude)
+        layout.ensureLayout(for: container)
+        return CGSize(width: width, height: max(1, ceil(layout.usedRect(for: container).height + textInset.height * 2)))
     }
 
     func makeCoordinator() -> Coordinator {

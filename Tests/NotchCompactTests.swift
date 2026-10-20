@@ -225,6 +225,7 @@ enum NotchCompactTests {
         rail(suite)
         scratchpad(suite)
         readingLayout(suite)
+        messageReading(suite)
         readingLevels(suite)
         focus(suite)
         sizing(suite)
@@ -581,6 +582,28 @@ enum NotchCompactTests {
     /// in light and dark, a nested task's circle sits under its parent's
     /// text, a task's wrapped lines hang under its own text, and a task in a
     /// quote keeps the quote's bar and colour.
+    private static func messageReading(_ suite: TestSuite) {
+        let message = "# Resumo\n\n**Concluído** e *revisado*.\n\n- "
+            + String(repeating: "Uma mensagem longa precisa envolver sem cortar o texto. ", count: 8)
+            + "\n\n```swift\nlet ok = true\n```"
+        let blocks = ScratchpadSupport.markdownPreview(message)
+        func height(_ width: CGFloat) -> CGFloat {
+            let host = NSHostingView(rootView: MarkdownPreview(blocks: blocks, baseSize: 11,
+                fitsContent: true, textInset: .zero, taskStates: (done: "Done", notDone: "Open")).frame(width: width))
+            host.frame = NSRect(x: 0, y: 0, width: width, height: 600)
+            host.layoutSubtreeIfNeeded()
+            return host.fittingSize.height
+        }
+        let narrow = height(220), wide = height(440)
+        suite.expect(narrow > 120 && wide > 60 && narrow > wide,
+                     "formatted chat messages grow to their full content and reflow at the conversation width")
+        let view = TaskPreviewTextView(frame: .zero)
+        MarkdownPreview.Coordinator().show(blocks, base: 11, taskStates: (done: "Done", notDone: "Open"), in: view)
+        suite.expect(view.string.contains("Concluído") && view.string.contains("let ok = true")
+                     && !view.string.contains("**") && !view.string.contains("```") && !view.string.contains("# Resumo"),
+                     "chat reading shows formatted content rather than literal Markdown markers")
+    }
+
     private static func readingLayout(_ suite: TestSuite) {
         // The most opaque pixel of an empty circle drawn in `appearance`; a
         // palette would lay tertiary label's alpha over the ring's, at ~7%.

@@ -12,12 +12,22 @@ Claude hook questions/approvals appear first, even while usage history loads.
 Rows show a provider mark, project/conversation, activity, a status indicator and
 elapsed time. Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
-Only rows between sessions have separators. The chevron opens a separate detail;
-terminal access is an icon in that detail. Escape returns through the host's
+Only rows between sessions have separators. The main row area opens the external
+terminal; if none is identified, it falls back to details. The chevron is a
+separate button that opens a detail without jumping to the terminal. Approval
+and question controls also remain outside the terminal button. Terminal access
+is additionally available as an icon in the detail. Escape returns through the host's
 page-layer mechanism. Detail headers and the reply/approval area stay visible
 while the conversation scrolls. Long structured questions scroll with the
 conversation so every option and its custom reply remain reachable. Tasks,
 subagents and plans remain available there.
+
+Conversation messages render Markdown using the existing native Scratchpad
+parser/preview: headings, lists, emphasis, links and code retain their formatting
+and selectable content. In conversations the preview fits each message's height
+and leaves scrolling to the transcript; the Scratchpad retains its original
+independent scrolling. Parsing is repeated only when the message/language changes.
+Task boxes in conversation content are read-only and never edit the transcript.
 
 The overview uses its intrinsic content height up to the configured island
 budget, with a fixed footer. The footer shows per-provider limit readings and
