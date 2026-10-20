@@ -38,7 +38,7 @@ struct NotchAgentsView: View {
     private func label(_ key: NotchAgentPanelText) -> String { NotchAgentStrings.panel(key, language: l10n.language) }
     private var codexAccounts: [CodexProfileLimitsState] {
         _ = (codex, hiddenCards)
-        return NotchAgentSupport.showsCodexAccounts() ? accounts.states : []
+        return codex && (cards.contains(.limits) || cards.contains(.resets)) ? accounts.states : []
     }
     private var providers: [AgentProvider] {
         [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil]
