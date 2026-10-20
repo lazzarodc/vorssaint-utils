@@ -24,6 +24,8 @@ struct NotchAgentsSettingsControls: View {
     @AppStorage(DefaultsKey.notchAgentsLimitThreshold) private var limitThreshold = NotchAgentSupport.defaultLimitThreshold
     @AppStorage(DefaultsKey.notchAgentsDailyBudget) private var dailyBudget = 0.0
     @AppStorage(DefaultsKey.notchAgentsPriceUpdates) private var priceUpdates = true
+    @State private var hookInstalled = ApprovalCenter.hookInstalled
+    @State private var hookFailed = false
     @State private var dragging: NotchAgentCard?
     @State private var roots: [AgentProvider: Bool] = [:]
     @State private var claudeApp: URL?
@@ -50,6 +52,16 @@ struct NotchAgentsSettingsControls: View {
             providerRow(.opencode, isOn: $opencode)
             providerRow(.copilot, isOn: $copilot)
             if codex { CodexAccountsSettings() }
+            if claude {
+                SettingsRow(symbol: "terminal", title: sessionText(.hookTitle), caption: sessionText(.hookHelp)) {
+                    Button(sessionText(hookInstalled ? .removeHook : .installHook)) {
+                        let ok = hookInstalled ? ApprovalCenter.uninstallHook() : ApprovalCenter.installHook()
+                        hookFailed = !ok
+                        hookInstalled = ApprovalCenter.hookInstalled
+                    }
+                }
+                if hookFailed { Text(sessionText(.hookFailed)).font(.caption).foregroundStyle(.orange) }
+            }
 
             Divider()
             Text(text.cardsTitle).font(.subheadline.weight(.medium))
@@ -158,6 +170,10 @@ struct NotchAgentsSettingsControls: View {
                        String(liveActivity), readout, limitDisplay, limitFocus]) { _, _ in
             NotchService.shared.syncWithPreferences()
         }
+    }
+
+    private func sessionText(_ key: NotchSessionText) -> String {
+        NotchAgentStrings.session(key, language: l10n.language)
     }
 
     private var priceCaption: String {

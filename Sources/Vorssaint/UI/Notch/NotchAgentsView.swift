@@ -6,6 +6,8 @@ import SwiftUI
 /// The AI page: cards the person picked, paired across the strip.
 struct NotchAgentsView: View {
     let size: CGSize
+    @ObservedObject private var monitor = AgentMonitor.shared
+    @State private var selectedSession: Int32?
     @ObservedObject private var usage = AgentUsageService.shared
     @ObservedObject private var accounts = CodexProfileLimitsService.shared
     @ObservedObject private var l10n = L10n.shared
@@ -36,35 +38,37 @@ struct NotchAgentsView: View {
             .filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty) }
     }
 
-    private var rows: [[NotchAgentTile]] {
-        // The strings are read here so a change in Settings redraws the page.
+    private var sessionRows: (before: [[NotchAgentTile]], after: [[NotchAgentTile]]) {
         _ = (cardOrder, hiddenCards)
-        return NotchAgentSupport.rows(NotchAgentSupport.tiles(cards: NotchAgentSupport.cards(), providers: providers,
-                                                              codexAccounts: codexAccounts.map(\.id)),
-                                      width: size.width)
+        return NotchAgentSupport.rowsAroundSessions(cards: NotchAgentSupport.cards(), providers: providers,
+                                                    codexAccounts: codexAccounts.map(\.id), width: size.width)
     }
+
+    private var legacyProviders: [AgentProvider] { providers.filter { $0 == .opencode || $0 == .copilot } }
+    private var showsLegacyLive: Bool { NotchAgentSupport.cards().contains(.live) && !legacyProviders.isEmpty }
+    private var rows: [[NotchAgentTile]] { sessionRows.before + sessionRows.after }
 
     var body: some View {
         Group {
-            if !usage.snapshot.loaded && codexAccounts.isEmpty {
+            if let id = selectedSession, let agent = monitor.agents.first(where: { $0.id == id }) {
+                ScrollView {
+                    NotchInteractiveSessionDetail(agent: agent) { selectedSession = nil }
+                        .id(id)
+                }
+            } else if !usage.snapshot.loaded && codexAccounts.isEmpty && interactiveSessions.isEmpty {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text(text.loading).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if providers.isEmpty {
+            } else if providers.isEmpty && interactiveSessions.isEmpty {
                 NotchEmptyView(symbol: "sparkles", message: text.empty)
-            } else if rows.isEmpty {
+            } else if rows.isEmpty && interactiveSessions.isEmpty && !showsLegacyLive {
                 NotchEmptyView(symbol: "square.grid.2x2", message: text.noCards)
             } else {
-                let rows = rows
                 TimelineView(.periodic(from: .now, by: 15)) { context in
-                    if NotchAgentSupport.contentHeight(rows) > size.height + 0.5 {
-                        ScrollView { grid(rows, now: context.date) }
-                            .scrollIndicators(.automatic)
-                    } else {
-                        grid(rows, now: context.date)
-                    }
+                    ScrollView { pageContent(now: context.date) }
+                        .scrollIndicators(.automatic)
                 }
                 // The period drives several cards, so it sits in the island's
                 // top row, beside the camera, while any of them shows.
@@ -79,11 +83,39 @@ struct NotchAgentsView: View {
             usage.pageDidAppear(preview: preview)
             accounts.pageDidAppear(preview: preview)
         }
+        .onChange(of: selectedSession) { _, id in
+            guard !preview else { return }
+            NotchService.shared.setPageLayer(.agents, close: id == nil ? nil : { selectedSession = nil })
+        }
+        .onChange(of: monitor.agents.map(\.id)) { _, ids in
+            if let selectedSession, !ids.contains(selectedSession) { self.selectedSession = nil }
+        }
         .onDisappear {
+            if !preview { NotchService.shared.setPageLayer(.agents, close: nil) }
             guard !preview else { return }
             usage.pageDidDisappear()
             accounts.pageDidDisappear()
         }
+    }
+
+    private var interactiveSessions: [AgentSession] {
+        NotchAgentSupport.cards().contains(.live) ? monitor.agents : []
+    }
+
+    private func pageContent(now: Date) -> some View {
+        VStack(spacing: NotchAgentSupport.spacing) {
+            if !sessionRows.before.isEmpty { grid(sessionRows.before, now: now) }
+            ForEach(interactiveSessions) { agent in
+                NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }
+            }
+            if showsLegacyLive {
+                NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)
+                    .frame(height: NotchAgentSupport.cardHeight)
+            }
+            if !sessionRows.after.isEmpty { grid(sessionRows.after, now: now) }
+            if !usage.snapshot.loaded { ProgressView().controlSize(.small).padding() }
+        }
+        .padding(3)
     }
 
     private var periodMenu: some View {
@@ -119,7 +151,7 @@ struct NotchAgentsView: View {
         case .spend:
             NotchAgentSpendCard(snapshot: snapshot, providers: providers, period: shown, text: text)
         case .live:
-            NotchAgentLiveCard(snapshot: snapshot, providers: providers, text: text)
+            NotchAgentLiveCard(snapshot: snapshot, providers: legacyProviders, text: text)
         case .trend:
             NotchAgentTrendCard(snapshot: snapshot, providers: providers, period: shown, text: text)
         case .models:

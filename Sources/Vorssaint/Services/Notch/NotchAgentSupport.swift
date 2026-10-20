@@ -302,6 +302,19 @@ enum NotchAgentSupport {
         return rows
     }
 
+    /// Keep the person's card order while giving process sessions a full-width
+    /// slot. The usage-only live card remains available for OpenCode/Copilot.
+    static func rowsAroundSessions(cards: [NotchAgentCard], providers: [AgentProvider],
+                                   codexAccounts: [String], width: CGFloat) -> (before: [[NotchAgentTile]], after: [[NotchAgentTile]]) {
+        guard let live = cards.firstIndex(of: .live) else {
+            return (rows(tiles(cards: cards, providers: providers, codexAccounts: codexAccounts), width: width), [])
+        }
+        let before = Array(cards[..<live])
+        let after = Array(cards[cards.index(after: live)...])
+        return (rows(tiles(cards: before, providers: providers, codexAccounts: codexAccounts), width: width),
+                rows(tiles(cards: after, providers: providers, codexAccounts: codexAccounts), width: width))
+    }
+
     static func height(of row: [NotchAgentTile]) -> CGFloat {
         if row.contains(where: \.card.fullWidth) { return chartHeight }
         return row.contains { $0.accountID != nil || $0.namesDefaultAccount } ? accountCardHeight : cardHeight

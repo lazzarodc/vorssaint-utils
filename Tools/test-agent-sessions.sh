@@ -1,0 +1,33 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Vorssaint
+set -euo pipefail
+cd "$(dirname "$0")/.."
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+source_dir=Sources/Vorssaint/Services/AgentSessions
+run() {
+    local name="$1"; shift
+    local sources=()
+    for file in "$@"; do sources+=("$source_dir/$file.swift"); done
+    echo "▸ $name"
+    swiftc "${sources[@]}" "Tests/AgentSessions/${name}Tests.swift" -o "$work/$name"
+    "$work/$name"
+}
+run AgentDetection Agent
+run QuestionParse Agent TailRead ClaudeSessions
+run ProjectPath Agent TailRead ClaudeSessions
+run LastPrompt Agent TailRead ClaudeSessions
+run TailRead TailRead
+run ProcessNaming ProcessNaming
+run HookSettings HookSettings
+run RolloutAssignment RolloutAssignment
+run CodexPhase Agent TailRead RolloutAssignment CodexSessions
+echo "▸ Monitor"
+swiftc "$source_dir/Agent.swift" "$source_dir/AgentMonitor.swift" \
+    "$source_dir/ApprovalCenter.swift" "$source_dir/TerminalBridge.swift" \
+    "$source_dir/ClaudeSessions.swift" "$source_dir/CodexSessions.swift" \
+    "$source_dir/TailRead.swift" "$source_dir/RolloutAssignment.swift" \
+    "$source_dir/ProcessNaming.swift" "$source_dir/HookSettings.swift" \
+    Tests/AgentSessions/HostSupport.swift Tests/AgentSessions/MonitorTests.swift -o "$work/Monitor"
+"$work/Monitor"

@@ -6,6 +6,20 @@ import SQLite3
 
 enum NotchAgentTests {
     static func run(_ suite: TestSuite) {
+        for language in AppLanguage.allCases {
+            let translations = NotchAgentStrings.sessionTranslations[language] ?? []
+            suite.expect(translations.count == NotchSessionText.allCases.count && translations.allSatisfy { !$0.isEmpty },
+                         "interactive session text covers every label in \(language.rawValue)")
+        }
+        let layout = NotchAgentSupport.rowsAroundSessions(cards: [.spend, .live, .limits],
+                                                         providers: [.codex, .copilot], codexAccounts: [], width: 500)
+        suite.expect(layout.before.flatMap { $0 }.map(\.card) == [.spend]
+                     && layout.after.flatMap { $0 }.map(\.card) == [.limits],
+                     "interactive sessions retain the chosen position between usage cards")
+        let hidden = NotchAgentSupport.rowsAroundSessions(cards: [.spend, .limits],
+                                                         providers: [.codex], codexAccounts: [], width: 500)
+        suite.expect(hidden.before.flatMap { $0 }.map(\.card) == [.spend, .limits] && hidden.after.isEmpty,
+                     "hiding interactive sessions retains every usage card")
         // Prices come from the list the app ships, the same file the project publishes.
         let previous = AgentPricing.list
         let shipped = (try? Data(contentsOf: URL(fileURLWithPath: "Resources/agent-prices.json"))).flatMap(AgentPriceList.decode)

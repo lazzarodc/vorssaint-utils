@@ -842,6 +842,7 @@ final class NotchService: ObservableObject {
     /// The AI page is as tall as the cards it shows; nil while the logs are
     /// first read, when the page fills the island with its progress.
     private func agentsContentHeight(width: CGFloat) -> CGFloat? {
+        if NotchAgentSupport.cards().contains(.live), !AgentMonitor.shared.agents.isEmpty { return nil }
         let usage = AgentUsageService.shared.snapshot
         let enabled = NotchAgentSupport.providers()
         // Added Codex accounts have cards before, or without, any log.
@@ -849,9 +850,12 @@ final class NotchService: ObservableObject {
         guard usage.loaded || !accounts.isEmpty else { return nil }
         let providers = enabled.filter { usage.seen.contains($0) || ($0 == .codex && !accounts.isEmpty) }
         guard !providers.isEmpty else { return 0 }
-        return NotchAgentSupport.contentHeight(NotchAgentSupport.rows(
-            NotchAgentSupport.tiles(cards: NotchAgentSupport.cards(), providers: providers, codexAccounts: accounts),
-            width: width))
+        let cards = NotchAgentSupport.cards()
+        let rows = NotchAgentSupport.rowsAroundSessions(cards: cards, providers: providers,
+                                                       codexAccounts: accounts, width: width)
+        let legacy = cards.contains(.live) && providers.contains { $0 == .opencode || $0 == .copilot }
+        let live: [[NotchAgentTile]] = legacy ? [[NotchAgentTile(card: .live, provider: nil)]] : []
+        return NotchAgentSupport.contentHeight(rows.before + live + rows.after) + 6
     }
     var expandedGeometry: NotchGeometry {
         var result = geometry
@@ -1113,7 +1117,10 @@ final class NotchService: ObservableObject {
         if !NotchFileToolsService.shared.offersMediaDrop { endFileDrop() }
         // Paused while the island is away, the section still stops at once
         // when it is turned off.
-        if !NotchAgentSupport.isEnabled() { AgentUsageService.shared.stop() }
+        if !NotchAgentSupport.isEnabled() {
+            AgentUsageService.shared.stop()
+            AgentMonitor.shared.stop()
+        }
         guard !suspended else {
             if session.canRunTimer { NotchTimerService.shared.syncWithPreferences() }
             else { NotchTimerService.shared.suspend() }
@@ -1130,6 +1137,7 @@ final class NotchService: ObservableObject {
         NotchNotificationService.shared.syncWithPreferences()
         NotchAudioLevelService.shared.syncWithPreferences()
         AgentUsageService.shared.syncWithPreferences()
+        AgentMonitor.shared.syncWithPreferences()
         followsPointer = displayPreference == .pointer || displayPreference == .all
         showsOnAllDisplays = displayPreference == .all
         updateFullscreenDisplays()
@@ -1219,6 +1227,7 @@ final class NotchService: ObservableObject {
         NotchLyricsService.shared.stop()
         NotchFileToolsService.shared.stop()
         AgentUsageService.shared.stop()
+        AgentMonitor.shared.stop()
         guard running else { return }
         running = false
         NotchTimerService.shared.stop()
@@ -1282,6 +1291,7 @@ final class NotchService: ObservableObject {
         NotchCalendarService.shared.stop()
         NotchNotificationService.shared.stop()
         AgentUsageService.shared.pause()
+        AgentMonitor.shared.stop()
         settingsSignature = ""
         expanded = false
         peeking = false
@@ -3951,6 +3961,13 @@ final class NotchService: ObservableObject {
             NotchDownloadService.shared.onFailure = { [weak self] in self?.reactMascot(.confused) }
         }
         if modules.contains(.agents) {
+            AgentMonitor.shared.$agents
+                .map { $0.map(\.id) }.removeDuplicates().dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.objectWillChange.send()
+                    self?.refreshPresentation()
+                }.store(in: &subscriptions)
             // Only what changes the island's size or strip: a turn starting or
             // ending, the first read landing, which agents have cards, and
             // which are working, since each one's mark widens the strip.
