@@ -3,7 +3,13 @@
 Pergunta: **como priorizar sessões e pendências na ilha, preservando o acesso aos oito grupos de informação existentes?**
 
 Preferência confirmada em 2026-10-20: ao abrir AI Agents, o usuário quer primeiro
-ver sessões e responder pendências. Ainda não há uma variante escolhida.
+ver sessões e responder pendências. O usuário preferiu A e pediu o refinamento
+abaixo no Firefox. A implementação nativa ainda não faz parte deste estudo.
+
+Refinamento confirmado: retirar a expansão de consumo/histórico do fim da lista;
+mostrar o tempo até a renovação da sessão junto ao percentual livre de cada
+provedor; usar um botão de ícone de medidor no rodapé para abrir limites e uso,
+com tooltip e nome acessível. Uso/histórico continuam acessíveis nesse detalhe.
 
 ## Rodar
 
@@ -22,7 +28,7 @@ histórico ou conta. Nenhuma aprovação, mensagem ou renovação real.
 
 | Variante | Estrutura | Hipótese |
 | --- | --- | --- |
-| A — Fila de atenção | Pendências no topo, sessões em linhas, limites na base, análises recolhidas | Melhor abertura para agir rapidamente |
+| A — Fila de atenção | Pendências no topo, sessões em linhas, percentual e renovação na base; ícone abre uso | Preferida pelo usuário; elimina o acesso redundante no fim da lista |
 | B — Sessões / Uso | Duas áreas, tabela compacta de sessões e uma área de consulta | Separar acompanhamento de análise libera espaço |
 | C — Lista + conversa | Lista lateral, detalhe selecionado e limites na base | Várias conversas ficam navegáveis sem voltar de uma tela |
 
@@ -71,7 +77,7 @@ Esboços estruturais:
 A                   B                    C
 pendência           Sessões | Uso        lista | conversa
 sessão em linha     tabela de sessões    lista | ações
-uso recolhido       OU análise completa  lista | resposta
+ícone abre uso      OU análise completa  lista | resposta
 limites fixos       alerta contextual    limites fixos
 ```
 
@@ -90,8 +96,7 @@ pendente. Não foram criados testes para este código descartável.
 ## Captura e próxima decisão
 
 Branch de captura: `prototype/ai-agents-layout`. Este README é o ponteiro local
-do estudo; não existe issue de implementação vinculada. Pergunta ainda aberta:
-escolher A/B/C ou combinar elementos. Recomendação inicial: A, pelo acesso direto
-às pendências e por preservar a largura útil. Não é uma decisão validada.
-Depois da escolha, registrar o motivo aqui/no commit e reimplementar a decisão
-em SwiftUI. Não promover este HTML para produção.
+do estudo; não existe issue de implementação vinculada. Direção escolhida: A,
+com acesso único a limites e uso por ícone e renovação visível no rodapé.
+Revisar o refinamento no protótipo antes de reimplementar em SwiftUI.
+Não promover este HTML para produção.

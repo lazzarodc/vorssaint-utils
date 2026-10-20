@@ -2,7 +2,7 @@
 const $ = selector => document.querySelector(selector);
 const escapeHTML = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const variants = {
-  A: {name:'Fila de atenção', description:'Uma página contínua. A aprovação ocupa o primeiro lugar; as outras sessões viram linhas. Uso e histórico ficam recolhidos, e os limites permanecem no rodapé.', gain:'A pendência é visível e acionável já na abertura. Não exige escolher uma área.', tradeoff:'Com muitas pendências, a fila cresce. O histórico pede expansão e rolagem.'},
+  A: {name:'Fila de atenção', description:'Uma página contínua para sessões e pendências. O rodapé reúne percentual livre e tempo até a renovação; um ícone abre limites, consumo e histórico.', gain:'A pendência é acionável na abertura, sem um segundo acesso a uso no fim da lista.', tradeoff:'Com muitas pendências, a fila cresce. Consumo e histórico ficam a um clique no ícone do rodapé.'},
   B: {name:'Sessões / Uso', description:'Duas áreas com propósitos distintos. Sessões abre por padrão; Uso reúne limites, consumo e histórico. Uma faixa avisa quando a capacidade exige atenção.', gain:'Mais espaço útil para sessões e para análise, cada uma em seu momento.', tradeoff:'Consultar consumo custa uma troca de área. O alerta precisa continuar visível fora de Sessões.'},
   C: {name:'Lista + conversa', description:'Uma lista estreita mantém as sessões à vista; o painel ao lado mostra apenas a conversa selecionada. Limites e acesso ao uso ficam na base.', gain:'Trocar de conversa não exige voltar de uma tela de detalhe. Favorece várias sessões simultâneas.', tradeoff:'Divide a largura da ilha. Com 480 px, mensagens e ações ficam mais apertadas.'}
 };
@@ -30,7 +30,8 @@ const selectedSession = () => state.sessions.find(s=>s.id===state.selected) ?? s
 const button = (label, action, extra='', classes='pill-btn') => `<button class="${classes}" data-action="${action}" ${extra}>${label}</button>`;
 function empty() {return '<div class="empty-state"><div class="empty-symbol" aria-hidden="true">◇</div><h3>Nenhuma sessão aberta</h3><p>Abra Claude ou Codex no seu terminal. O consumo continua disponível aqui.</p></div>';}
 function alert() {return critical()?`<div class="limit-alert"><span>Codex: 8% da sessão restante. Renova em 1h 14m.</span>${button('Ver','capacity','','text-btn')}</div>`:'';}
-function footer() {
+function footer(withRenewals=false) {
+  if(withRenewals) return `<div class="limit-footer with-renewals"><div class="limits-inline"><div class="limit-summary"><span><span class="mark">✳</span> Claude <b>98%</b> livre</span><span class="renewal" title="Limite da sessão Claude renova em 3 horas e 9 minutos">↻ Sessão em 3h 09m</span></div><div class="limit-summary ${critical()?'critical':''}"><span><span class="mark codex">◈</span> Codex <b>${codexRemaining()}%</b> livre</span><span class="renewal" title="Limite da sessão Codex renova em 1 hora e 14 minutos">↻ Sessão em 1h 14m</span></div></div><button class="usage-icon" data-action="capacity" aria-label="Abrir limites e uso" title="Limites e uso"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a9 9 0 1 1 16 0"/><path d="m12 12 4-4M5 15h1M6.5 7.5l1 1M12 4v1M18 15h1"/><circle cx="12" cy="12" r="1.5"/></svg></button></div>`;
   return `<div class="limit-footer"><div class="limits-inline"><span><span class="mark">✳</span> Claude <b>98%</b> livre</span><span class="${critical()?'critical':''}"><span class="mark codex">◈</span> Codex <b>${codexRemaining()}%</b> livre</span></div>${button('Limites e uso','capacity','','text-btn')}</div>`;
 }
 function approval(s, compact=false) {
@@ -63,7 +64,7 @@ function conversation(s, workspace=false) {
   <div class="row between" style="margin-top:10px"><span class="sub">${s.model} · ${s.branch}</span>${button('Abrir terminal','terminal',`data-id="${s.id}"`,'text-btn')}</div>`;
 }
 function VariantA() {
-  return `<div class="queue-heading"><h3>${pending()?'Precisa de você':'Suas sessões'}</h3><span>${state.sessions.length} abertas</span></div>${alert()}<div class="scroll queue-list">${state.sessions.length?sessions().map(s=>s.pending?approval(s):sessionLine(s)).join(''):empty()}<details class="queue-usage"><summary>Consultar consumo e histórico</summary><div class="usage-head"><h3>Uso</h3>${periodSelect()}</div>${usageBody(true)}</details></div>${footer()}`;
+  return `<div class="queue-heading"><h3>${pending()?'Precisa de você':'Suas sessões'}</h3><span>${state.sessions.length} abertas</span></div>${alert()}<div class="scroll queue-list">${state.sessions.length?sessions().map(s=>s.pending?approval(s):sessionLine(s)).join(''):empty()}</div>${footer(true)}`;
 }
 function VariantB() {
   const tabbar=`<div class="mode-tabs" aria-label="Áreas de AI Agents">${button(`Sessões${pending()?' · '+pending()+' pendente':''}`,'area',`data-area="sessions" aria-pressed="${state.area==='sessions'}"`)}${button('Uso','area',`data-area="usage" aria-pressed="${state.area==='usage'}"`)}</div>`;
