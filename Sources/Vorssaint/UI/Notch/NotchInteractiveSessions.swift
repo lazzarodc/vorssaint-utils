@@ -24,7 +24,7 @@ private func localizedSessionActivity(_ activity: String) -> String {
 }
 
 private func jumpToSession(_ agent: AgentSession) {
-    DispatchQueue.global(qos: .userInitiated).async { TerminalBridge.jump(to: agent) }
+    NotchService.shared.jumpToAgentSession(agent)
 }
 
 struct NotchInteractiveSessionCard: View {

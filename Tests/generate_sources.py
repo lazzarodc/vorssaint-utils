@@ -1069,6 +1069,10 @@ def main():
               "    private func removeScreenEdgeClickMonitors("])
           + "}\n}\n")
     write("NotchScreenRefresh.swift", "import Foundation\n\nextension NotchScreenRefreshContract {\nfinal class Service: State {\n"
+          + "".join(declaration(notch, prefix).replace("@Published private(set) ", "") for prefix in [
+              "    @Published private(set) var selected:",
+              "    @Published private(set) var showingAppPanel =",
+              "    @Published private(set) var showingSections ="])
           + declaration(notch, "    private func schedulePreferenceSync()").replace("private func", "func", 1)
           + declaration(notch, "    private func screenParametersDidChange()").replace("private func", "func", 1)
           + declaration(notch, "    private func invalidateMenuSpace(").replace("private func", "func", 1)

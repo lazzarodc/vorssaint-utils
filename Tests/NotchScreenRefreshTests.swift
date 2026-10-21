@@ -40,7 +40,10 @@ enum NotchScreenRefreshContract {
             func add(_ timer: Timer, forMode: Mode) {}
         }
     }
-    struct RunningApplication { let bundleIdentifier: String? }
+    struct RunningApplication {
+        let bundleIdentifier: String?
+        var processIdentifier: Int32 = 1
+    }
     enum NSWorkspace {
         static let shared = Workspace()
         final class Workspace { var frontmostApplication: RunningApplication? }
@@ -124,6 +127,7 @@ enum NotchScreenRefreshContract {
         var keepsWorkingSurface = false
         var openedByHover = false
         var clickedSinceOpening = false
+        var sessionActivation = NotchSessionActivation()
         var preferenceSyncs = 0
         var reads = 0
         var appliedRooms: [CGFloat?] = []
@@ -372,6 +376,42 @@ enum NotchScreenRefreshContract {
         hovered.applicationDidActivate()
         suite.expect(hovered.collapses == 3,
                "an island opened by a click or shortcut still closes when another app activates under the pointer")
+
+        let sessions = Service()
+        sessions.expanded = true
+        sessions.selected = .agents
+        sessions.clickedSinceOpening = true
+        for pid: Int32 in [11, 22, 11] {
+            sessions.sessionActivation.begin(processIdentifier: pid, now: Date())
+            NSWorkspace.shared.frontmostApplication = RunningApplication(bundleIdentifier: "com.example.session", processIdentifier: pid)
+            sessions.applicationDidActivate()
+        }
+        suite.expect(sessions.collapses == 0 && sessions.panel?.resignations == 3,
+                     "session navigation across iTerm and editor apps releases key focus and keeps the island open")
+        NSWorkspace.shared.frontmostApplication = RunningApplication(bundleIdentifier: "com.example.other", processIdentifier: 33)
+        sessions.applicationDidActivate()
+        suite.expect(sessions.collapses == 1, "a later unrelated application still closes the session list")
+        sessions.selected = .controls
+        sessions.sessionActivation.begin(processIdentifier: 33, now: Date())
+        sessions.applicationDidActivate()
+        suite.expect(sessions.collapses == 2, "a session handoff cannot keep another island module open")
+
+        sessions.selected = .agents
+        sessions.sessionActivation.begin(processIdentifier: 33, now: Date())
+        sessions.selected = .controls
+        sessions.selected = .agents
+        sessions.applicationDidActivate()
+        suite.expect(sessions.collapses == 3, "leaving and returning to Agents cancels the old navigation")
+        sessions.sessionActivation.begin(processIdentifier: 33, now: Date())
+        sessions.showingSections = true
+        sessions.showingSections = false
+        sessions.applicationDidActivate()
+        suite.expect(sessions.collapses == 4, "opening and closing the sections selector cancels the old navigation")
+        sessions.sessionActivation.begin(processIdentifier: 33, now: Date())
+        sessions.showingAppPanel = true
+        sessions.showingAppPanel = false
+        sessions.applicationDidActivate()
+        suite.expect(sessions.collapses == 5, "opening and closing the app panel cancels the old navigation")
 
         let covering = Service()
         covering.geometry.compactSideRoom = nil

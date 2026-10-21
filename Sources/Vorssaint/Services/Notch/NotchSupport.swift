@@ -6,6 +6,28 @@ import Combine
 import Foundation
 import CoreGraphics
 
+/// One expected app activation caused by a session link, never a global pin.
+struct NotchSessionActivation {
+    private var expected: (pid: Int32, at: Date)?
+
+    mutating func begin(processIdentifier: Int32, now: Date) {
+        expected = (processIdentifier, now)
+    }
+
+    mutating func reset() { expected = nil }
+
+    mutating func closesOnActivation(processIdentifier: Int32, now: Date,
+                                    openedByHover: Bool, clicked: Bool, pointerInside: Bool) -> Bool {
+        let pending = expected
+        expected = nil
+        if let pending, pending.pid == processIdentifier {
+            let elapsed = now.timeIntervalSince(pending.at)
+            if elapsed >= 0 && elapsed < 5 { return false }
+        }
+        return NotchSupport.closesOnActivation(openedByHover: openedByHover, clicked: clicked, pointerInside: pointerInside)
+    }
+}
+
 enum NotchModule: String, CaseIterable, Identifiable {
     case controls, mixer, music, clipboard, captures, files, system, tools, calendar, notifications, timer, camera, downloads, scratchpad, agents, watch
     var id: String { rawValue }

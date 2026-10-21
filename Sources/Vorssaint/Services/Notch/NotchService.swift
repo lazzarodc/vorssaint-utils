@@ -122,9 +122,15 @@ final class NotchService: ObservableObject {
     @Published private(set) var captureControlsCollapsed = false
     @Published private(set) var captureSelectionInProgress = false
     @Published var pinned = false
-    @Published private(set) var selected: NotchModule = .controls
-    @Published private(set) var showingAppPanel = false
-    @Published private(set) var showingSections = false
+    @Published private(set) var selected: NotchModule = .controls {
+        didSet { if selected != oldValue { sessionActivation.reset() } }
+    }
+    @Published private(set) var showingAppPanel = false {
+        didSet { if showingAppPanel { sessionActivation.reset() } }
+    }
+    @Published private(set) var showingSections = false {
+        didSet { if showingSections { sessionActivation.reset() } }
+    }
     @Published private(set) var sectionQuery = ""
     @Published var highlightedSection: NotchModule? { didSet { revealHighlightedSection() } }
     /// The gallery's first visible row; the rows above it have stepped away.
@@ -210,6 +216,7 @@ final class NotchService: ObservableObject {
     private var openedByHover = false
     /// A click inside the open island, which may be what brings another app forward.
     private var clickedSinceOpening = false
+    private var sessionActivation = NotchSessionActivation()
     /// Whether the open detail was reached from inside the island, so Escape
     /// steps back to its page as the Back button does. A detail the island
     /// opened on, from the menu bar for instance, has nothing behind it and
@@ -1450,8 +1457,26 @@ final class NotchService: ObservableObject {
         if closesCommandBar { commandBarDidClose() }
     }
 
+    /// Preserve the session list through the one activation initiated here.
+    /// Subsequent clicks and unrelated app switches keep normal dismissal.
+    func jumpToAgentSession(_ agent: AgentSession) {
+        sessionActivation.reset()
+        let applications = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
+        if expanded, selected == .agents, let app = agent.terminalApp,
+           let index = TerminalBridge.activationTargetIndex(appNamed: app, runningNames: applications.map(\.localizedName)) {
+            let pid = applications[index].processIdentifier
+            // Switching windows inside the already-active app emits no app
+            // activation; do not leave an exemption waiting for a later switch.
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid {
+                sessionActivation.begin(processIdentifier: pid, now: Date())
+            }
+        }
+        DispatchQueue.global(qos: .userInitiated).async { TerminalBridge.jump(to: agent) }
+    }
+
     func collapse() {
         guard captureControls == nil, !heldDrag else { return }
+        sessionActivation.reset()
         let closeCapture = detachCaptureIfClosingOnCollapse()
         let closesCommandBar = showingCommandBar
         hoverState.close(pointerInside: windowHost?.containsHover(NSEvent.mouseLocation) == true)
@@ -3602,13 +3627,16 @@ final class NotchService: ObservableObject {
         guard !suspended else { return }
         fullscreenEnvironmentDidChange()
         invalidateMenuSpace()
-        let identifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        guard let application = NSWorkspace.shared.frontmostApplication else { return }
+        let identifier = application.bundleIdentifier
         guard identifier != Bundle.main.bundleIdentifier, identifier != AssistiveKeyboard.bundleID else { return }
+        if selected != .agents || showingSections || showingAppPanel { sessionActivation.reset() }
+        let closes = sessionActivation.closesOnActivation(processIdentifier: application.processIdentifier, now: Date(),
+                                                         openedByHover: openedByHover, clicked: clickedSinceOpening,
+                                                         pointerInside: windowHost?.containsHover(NSEvent.mouseLocation) == true)
         panel?.resignKey()
         if expanded, modules.contains(.clipboard) { ClipboardHistoryService.shared.rememberPasteTarget() }
-        if expanded, !pinned, !keepsWorkingSurface, captureControls == nil,
-           NotchSupport.closesOnActivation(openedByHover: openedByHover, clicked: clickedSinceOpening,
-                                           pointerInside: windowHost?.containsHover(NSEvent.mouseLocation) == true) {
+        if expanded, !pinned, !keepsWorkingSurface, captureControls == nil, closes {
             collapse()
         }
     }

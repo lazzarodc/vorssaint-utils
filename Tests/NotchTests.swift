@@ -7,6 +7,30 @@ import AppKit
 import SwiftUI
 
 enum NotchTests {
+    private static func sessionActivation(_ suite: TestSuite) {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        var navigation = NotchSessionActivation()
+        func closes(_ pid: Int32, after seconds: TimeInterval = 1) -> Bool {
+            navigation.closesOnActivation(processIdentifier: pid, now: now.addingTimeInterval(seconds),
+                                         openedByHover: false, clicked: true, pointerInside: true)
+        }
+        navigation.begin(processIdentifier: 11, now: now)
+        suite.expect(!closes(11), "opening an iTerm session keeps the island available")
+        navigation.begin(processIdentifier: 22, now: now)
+        suite.expect(!closes(22), "switching from iTerm to a VS Code session keeps the island available")
+        navigation.begin(processIdentifier: 11, now: now)
+        suite.expect(!closes(11), "returning from VS Code to iTerm also keeps the island available")
+        suite.expect(closes(11), "the exemption is consumed once; later activation closes normally")
+        navigation.begin(processIdentifier: 22, now: now)
+        suite.expect(closes(33), "an unrelated application activation still closes the island")
+        suite.expect(closes(22), "an unrelated activation cancels the pending handoff")
+        navigation.begin(processIdentifier: 22, now: now)
+        suite.expect(closes(22, after: 6), "a failed navigation must not exempt a later app switch")
+        navigation.begin(processIdentifier: 22, now: now)
+        navigation.reset()
+        suite.expect(closes(22), "closing or reopening the island clears pending navigation")
+    }
+
     private static func railContracts(_ suite: TestSuite) {
         let domain = "com.vorssaint.tests.notch-fan-only"
         let defaults = UserDefaults(suiteName: domain)!
@@ -1664,6 +1688,7 @@ enum NotchTests {
     }
 
     static func run(_ suite: TestSuite) {
+        sessionActivation(suite)
         shortcutContracts(suite)
         let previewStrip: CGFloat = 37
         suite.expect(NotchTranslucentTint.opacity(atDepth: previewStrip, stripHeight: previewStrip,

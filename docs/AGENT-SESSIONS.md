@@ -29,7 +29,10 @@ Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Session rows have no separators; the limits footer retains its top divider.
 The main row area opens the external
-terminal; if none is identified, it falls back to details. The chevron is a
+terminal; if none is identified, it falls back to details. Switching apps through
+this action keeps the island open, just like switching sessions within iTerm.
+Only the expected target application's next activation is exempted, for up to
+five seconds; unrelated activations and clicks outside still dismiss normally. The chevron is a
 separate button that opens a detail without jumping to the terminal. Approval
 and question controls also remain outside the terminal button. Terminal access
 is additionally available as an icon in the detail. Escape returns through the host's
