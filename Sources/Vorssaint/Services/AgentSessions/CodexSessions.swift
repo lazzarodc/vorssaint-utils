@@ -32,6 +32,7 @@ enum CodexSessions {
     // MARK: - pid → rollout discovery
 
     private static var pidCache: [Int32: String] = [:]
+    private static var pidCacheCheckedAt: [Int32: Date] = [:]
     private static var recentCache: (at: Date, rollouts: [(path: String, cwd: String?, mtime: Date)])?
     private static var metaCwdCache: [String: String?] = [:]
     private static let lock = NSLock()
@@ -53,24 +54,40 @@ enum CodexSessions {
     static func prune(livePids: Set<Int32>) {
         lock.lock()
         pidCache = RolloutAssignment.pruned(pidCache, livePids: livePids)
+        pidCacheCheckedAt = pidCacheCheckedAt.filter { livePids.contains($0.key) }
         lock.unlock()
     }
 
     /// Best-effort rollout path for a running codex process.
     static func rolloutPath(pid: Int32, cwd: String?) -> String? {
-        lock.lock()
-        if let cached = pidCache[pid], FileManager.default.fileExists(atPath: cached) {
-            lock.unlock()
-            return cached
-        }
-        lock.unlock()
+        resolveRollout(pid: pid, now: Date(), isValid: { path in
+            FileManager.default.fileExists(atPath: path) && metaCwd(path: path) != nil
+        }, discover: {
+            openRollout(pid: pid) ?? rolloutMatching(pid: pid, cwd: cwd)
+        })
+    }
 
-        let path = openRollout(pid: pid) ?? rolloutMatching(cwd: cwd)
-        if let path {
-            lock.lock()
-            pidCache[pid] = path
-            lock.unlock()
+    /// Shared discovery/cache path; injected sources let tests advance time and
+    /// change the available transcript without inspecting real user sessions.
+    static func resolveRollout(pid: Int32, now: Date,
+                               isValid: (String) -> Bool,
+                               discover: () -> String?) -> String? {
+        lock.lock()
+        let previous = pidCache[pid]
+        let checkedAt = pidCacheCheckedAt[pid]
+        lock.unlock()
+        if let previous, RolloutAssignment.cacheIsFresh(checkedAt: checkedAt, now: now),
+           isValid(previous) {
+            return previous
         }
+
+        // Discovery searches only recent files. Keep a valid older conversation
+        // when no replacement is found, but never preserve a helper transcript.
+        let path = discover() ?? previous.flatMap { isValid($0) ? $0 : nil }
+        lock.lock()
+        pidCache[pid] = path
+        pidCacheCheckedAt[pid] = path == nil ? nil : now
+        lock.unlock()
         return path
     }
 
@@ -89,10 +106,10 @@ enum CodexSessions {
     /// `assigned` is only meaningful because `prune(livePids:)` keeps the cache
     /// to live processes — otherwise it accumulates rollouts claimed by dead
     /// pids and starves new sessions of their own.
-    private static func rolloutMatching(cwd: String?) -> String? {
+    private static func rolloutMatching(pid: Int32, cwd: String?) -> String? {
         guard let cwd, !cwd.isEmpty else { return nil }
         lock.lock()
-        let assigned = Set(pidCache.values)
+        let assigned = Set(pidCache.filter { $0.key != pid }.values)
         lock.unlock()
         let candidates = recentRollouts().filter { $0.cwd == cwd }.map(\.path)
         return RolloutAssignment.select(candidates: candidates, assigned: assigned)
@@ -128,8 +145,9 @@ enum CodexSessions {
         return found
     }
 
-    /// cwd from the first line (session_meta) of a rollout.
-    private static func metaCwd(path: String) -> String? {
+    /// Root conversation cwd from session_meta; helper transcripts cannot be
+    /// inferred as the interactive CLI's conversation merely by sharing a folder.
+    static func metaCwd(path: String) -> String? {
         lock.lock()
         if let cached = metaCwdCache[path] {
             lock.unlock()
@@ -137,20 +155,31 @@ enum CodexSessions {
         }
         lock.unlock()
 
-        var cwd: String?
-        if let handle = FileHandle(forReadingAtPath: path),
-           let data = try? handle.read(upToCount: 16 * 1024),
-           let text = String(data: data, encoding: .utf8),
-           let firstLine = text.split(separator: "\n").first,
-           let obj = (try? JSONSerialization.jsonObject(with: Data(firstLine.utf8))) as? [String: Any] {
-            let payload = obj["payload"] as? [String: Any] ?? obj
-            cwd = payload["cwd"] as? String
-            try? handle.close()
-        }
+        let cwd = readMetadataCwd(path: path)
         lock.lock()
         metaCwdCache[path] = cwd
         lock.unlock()
         return cwd
+    }
+
+    private static func readMetadataCwd(path: String) -> String? {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? handle.close() }
+        // session_meta can contain large instruction blocks. Read through its
+        // newline, bounded independently of the potentially huge transcript.
+        var line = Data()
+        let limit = 4 * 1024 * 1024
+        while line.count < limit {
+            guard let chunk = try? handle.read(upToCount: min(16 * 1024, limit - line.count)) else { return nil }
+            if let newline = chunk.firstIndex(of: 10) {
+                line.append(contentsOf: chunk[..<newline])
+                break
+            }
+            line.append(chunk)
+            if chunk.isEmpty { break }
+        }
+        guard let obj = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else { return nil }
+        return RolloutAssignment.conversationCwd(obj["payload"] as? [String: Any] ?? obj)
     }
 
     // MARK: - Rollout tail parsing

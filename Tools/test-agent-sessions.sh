@@ -21,7 +21,7 @@ run LastPrompt Agent TailRead ClaudeSessions
 run TailRead TailRead
 run ProcessNaming ProcessNaming
 run HookSettings HookSettings
-run RolloutAssignment RolloutAssignment
+run RolloutAssignment Agent TailRead RolloutAssignment CodexSessions
 run CodexPhase Agent TailRead RolloutAssignment CodexSessions
 run Conversation Agent TailRead RolloutAssignment ClaudeSessions CodexSessions
 run Sound Agent AgentSessionSoundSupport

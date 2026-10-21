@@ -10,15 +10,24 @@ import Foundation
 ///
 /// Codex, unlike Claude Code, keeps no pid registry, so the mapping is inferred
 /// — from the file the process holds open, or failing that by matching the
-/// rollout's recorded cwd. Inferred mappings have to be *retired* when the
-/// process exits, and that is the part that was missing: the cache only ever
-/// grew, and `fileExists` never expired anything because rollout files are
-/// never deleted.
-///
-/// Split out with no dependencies so both halves are directly testable; the
-/// failure they cause is a card confidently showing someone else's
-/// conversation, which is worse than showing nothing.
+/// rollout's recorded cwd. Only root conversations can be inferred by folder;
+/// helper histories share their parent's folder. Cached assignments must be
+/// revalidated while the process lives and retired when it exits, because
+/// rollout files persist and macOS can reuse a PID.
 enum RolloutAssignment {
+    /// Session origin is historical: a VS Code conversation may be resumed in
+    /// a CLI. Exclude spawned helpers, not conversations by their original UI.
+    static func conversationCwd(_ metadata: [String: Any]) -> String? {
+        if let source = metadata["source"] as? [String: Any], source["subagent"] != nil { return nil }
+        if metadata["source"] as? String == "subagent" { return nil }
+        return metadata["cwd"] as? String
+    }
+
+    static func cacheIsFresh(checkedAt: Date?, now: Date) -> Bool {
+        guard let checkedAt else { return false }
+        let age = now.timeIntervalSince(checkedAt)
+        return age >= 0 && age < 30
+    }
 
     /// Drop mappings whose process is gone.
     ///

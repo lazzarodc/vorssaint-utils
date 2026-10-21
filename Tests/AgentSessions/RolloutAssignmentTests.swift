@@ -29,6 +29,52 @@ struct RolloutAssignmentTests {
     static let roll3 = "/Users/me/.codex/sessions/2026/07/19/rollout-3.jsonl"
 
     static func main() {
+        let folder = "/repo"
+        let records: [(String, [String: Any])] = [
+            (roll1, ["cwd": folder, "source": ["subagent": ["thread_spawn": [:]]]]),
+            (roll2, ["cwd": folder, "source": "vscode"]),
+            (roll3, ["cwd": folder, "source": "cli"])
+        ]
+        let rootCandidates = records.filter { RolloutAssignment.conversationCwd($0.1) == folder }.map(\.0)
+        if RolloutAssignment.select(candidates: rootCandidates, assigned: []) != roll2 {
+            fail("a newer helper rollout must not displace the main conversation; an IDE-origin conversation can be resumed in CLI")
+        }
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        if !RolloutAssignment.cacheIsFresh(checkedAt: now.addingTimeInterval(-2), now: now)
+            || RolloutAssignment.cacheIsFresh(checkedAt: now.addingTimeInterval(-31), now: now)
+            || RolloutAssignment.cacheIsFresh(checkedAt: nil, now: now) {
+            fail("a live PID must revalidate its transcript binding after 30 seconds, not retain an inferred conversation forever")
+        }
+        let fixture = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jsonl")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let largeMetadata: [String: Any] = ["type": "session_meta", "payload": [
+            "cwd": folder, "source": "cli", "instructions": String(repeating: "é", count: 23_000)
+        ]]
+        let header = try! JSONSerialization.data(withJSONObject: largeMetadata)
+        try! (header + Data("\n{\"type\":\"event_msg\"}\n".utf8)).write(to: fixture)
+        if CodexSessions.metaCwd(path: fixture.path) != folder {
+            fail("a root transcript with metadata larger than 16 KB must remain discoverable")
+        }
+        // Exercise the production cache/discovery path with a controlled clock.
+        let pid: Int32 = 901
+        CodexSessions.prune(livePids: [])
+        func resolve(_ age: TimeInterval, _ discovered: String?, valid: Bool = true) -> String? {
+            CodexSessions.resolveRollout(pid: pid, now: now.addingTimeInterval(age),
+                                        isValid: { _ in valid }, discover: { discovered })
+        }
+        if resolve(0, roll1) != roll1 || resolve(2, roll2) != roll1 {
+            fail("a fresh association should be retained until its lease expires")
+        }
+        if resolve(31, roll2) != roll2 {
+            fail("an expired live association must discover the replacement transcript")
+        }
+        if resolve(62, nil) != roll2 {
+            fail("an existing root transcript older than the search window must survive an empty refresh")
+        }
+        if resolve(93, nil, valid: false) != nil {
+            fail("a missing or helper transcript must not survive an empty refresh")
+        }
+        CodexSessions.prune(livePids: [])
         // --- pruning retires dead pids ---------------------------------------
         let cache: [Int32: String] = [100: roll1, 200: roll2, 300: roll3]
 

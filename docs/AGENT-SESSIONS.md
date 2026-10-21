@@ -7,6 +7,16 @@ Process IDs identify cards, so sessions in the same project remain separate.
 Usage, accounts, limits and completion notifications keep their existing source.
 The monitor deliberately emits no second set of completion notifications.
 
+Codex metadata is read through its first complete line (up to 4 MB), including
+large instruction blocks, rather than truncating the JSON at 16 KB.
+Codex transcript discovery first checks the process's open rollout files, then
+falls back to recent conversations in the same working directory. The fallback
+excludes subagent histories, but keeps conversations originally created in an
+editor because they may later be resumed in a terminal. Associations are
+revalidated every 30 seconds; a valid older root transcript remains available
+when the recent-file search finds no replacement. Folder matching is best effort
+when several root conversations share a directory.
+
 The Live preference controls the session-first overview. Waiting sessions and
 Claude hook questions/approvals appear first, even while usage history loads.
 Rows show a provider mark, project/conversation with elapsed time beside its title,
