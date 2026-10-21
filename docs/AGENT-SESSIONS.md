@@ -172,8 +172,13 @@ Sounds are enabled with volume 50%. Each event has a system/custom sound picker
 and preview. Quiet hours default to disabled, with a configurable 22:00–08:00
 interval. Explicit previews bypass quiet hours and the master switch.
 
-Only interactive session transitions trigger these sounds; usage notifications
-keep their existing visual path. Existing sessions stay silent on the first scan
+Interactive sessions trigger these sounds; usage notifications keep their
+existing visual path. Codex completion sounds require an explicit root
+`task_complete` identity from the linked transcript, rather than a working →
+waiting status estimate. Tool/item completions, internal approval/review turns,
+errors and cancellations do not count as successful completion. A new root turn
+clears the previous completion signal; the same completion is not replayed by
+status changes or transcript rebinding. Existing sessions stay silent on the first scan
 after launch or resume. Repeated scans of the same state do not repeat a sound.
 Duplicate permission events already pending on the same session do not play twice.
 Disabling AI Agents or hiding Live stops playback and resets the sound baseline.

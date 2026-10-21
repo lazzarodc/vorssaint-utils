@@ -103,6 +103,8 @@ struct AgentSession: Identifiable, Equatable {
     var lastPrompt: String?
     var lastMessage: String?   // the agent's last message — the question it's asking when waiting
     var activity: String?      // e.g. "Writing middleware.ts"
+    /// Explicit root-turn completion; inferred waiting/CPU pauses are not completions.
+    var completedTurnID: String?
     var transcriptPath: String?
     var model: String?         // raw model id from the transcript, e.g. "claude-opus-4-8"
     var gitBranch: String?     // current branch of the session's cwd

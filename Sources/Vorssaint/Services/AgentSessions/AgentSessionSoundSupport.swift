@@ -31,8 +31,13 @@ struct AgentSessionSoundTracker {
         guard let previous else { return [] }
         return agents.compactMap { agent in
             guard let old = previous[agent.id], old.kind == agent.kind else { return .started }
+            if agent.kind == .codex, agent.status == .waiting,
+               old.transcriptPath == agent.transcriptPath,
+               let completed = agent.completedTurnID, completed != old.completedTurnID {
+                return .completed
+            }
             switch (old.status, agent.status) {
-            case (.working, .waiting): return .completed
+            case (.working, .waiting): return agent.kind == .claude ? .completed : nil
             case (.waiting, .working), (.idle, .working): return .acknowledged
             default: return nil
             }

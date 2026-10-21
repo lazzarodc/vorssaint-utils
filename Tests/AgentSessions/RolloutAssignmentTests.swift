@@ -35,6 +35,9 @@ struct RolloutAssignmentTests {
             (roll2, ["cwd": folder, "source": "vscode"]),
             (roll3, ["cwd": folder, "source": "cli"])
         ]
+        if RolloutAssignment.conversationCwd(["cwd": folder, "source": ["internal": "review"]]) != nil {
+            fail("an internal approval/review transcript must not be assigned to the interactive session")
+        }
         let rootCandidates = records.filter { RolloutAssignment.conversationCwd($0.1) == folder }.map(\.0)
         if RolloutAssignment.select(candidates: rootCandidates, assigned: []) != roll2 {
             fail("a newer helper rollout must not displace the main conversation; an IDE-origin conversation can be resumed in CLI")

@@ -24,6 +24,7 @@ enum CodexSessions {
         var model: String?
         var todos: [Todo] = []
         var phase: Phase = .unknown
+        var completedTurnID: String?
     }
 
     private static let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -208,7 +209,7 @@ enum CodexSessions {
             case "response_item":
                 handleItem(payload, info: &info, pending: &pendingCalls, resolved: &resolvedCallIds)
             case "event_msg":
-                handleEvent(payload, info: &info)
+                handleEvent(payload, timestamp: obj["timestamp"] as? String, info: &info)
             // Older flat format: response items at the top level.
             // "local_shell_call_output" was missing here, so shell results were
             // dropped before handleItem ever saw them.
@@ -282,12 +283,20 @@ enum CodexSessions {
         }
     }
 
-    private static func handleEvent(_ event: [String: Any], info: inout Info) {
+    private static func handleEvent(_ event: [String: Any], timestamp: String?, info: inout Info) {
+        // An internal turn finishing cannot finish the person's root turn.
+        if let root = event["root_turn_id"] as? String,
+           let turn = event["turn_id"] as? String, root != turn { return }
         switch event["type"] as? String {
         case "task_started":
             info.phase = .working
-        case "task_complete", "turn_aborted", "error", "shutdown_complete":
+            info.completedTurnID = nil
+        case "task_complete":
             info.phase = .waiting
+            info.completedTurnID = (event["turn_id"] as? String) ?? timestamp
+        case "turn_aborted", "error", "shutdown_complete":
+            info.phase = .waiting
+            info.completedTurnID = nil
         case "user_message":
             if let text = event["message"] as? String, isRealUserText(text) {
                 info.lastPrompt = text

@@ -95,6 +95,24 @@ struct CodexPhaseTests {
         let started = info([#"{"type":"event_msg","payload":{"type":"task_started"}}"#, item(shellCall)])
         if started.phase != .working { fail("task_started should mark the session working") }
 
+        let start = #"{"type":"event_msg","payload":{"type":"task_started","turn_id":"root","root_turn_id":"root"}}"#
+        let toolDone = #"{"type":"event_msg","payload":{"type":"item_completed","item":{"status":"completed"}}}"#
+        let childDone = #"{"type":"event_msg","payload":{"type":"task_complete","turn_id":"approval","root_turn_id":"root"}}"#
+        let rootDone = #"{"type":"event_msg","payload":{"type":"task_complete","turn_id":"root","root_turn_id":"root"}}"#
+        let intermediate = info([start, toolDone, childDone])
+        if intermediate.phase != .working || intermediate.completedTurnID != nil {
+            fail("tool and approval completions must not finish the root turn")
+        }
+        if info([start, rootDone]).completedTurnID != "root" {
+            fail("root task completion must expose its explicit completion identity")
+        }
+        if info([rootDone, start]).completedTurnID != nil {
+            fail("a new task must clear the previous turn's completion signal")
+        }
+        for event in ["turn_aborted", "error", "shutdown_complete"] {
+            let line = #"{"type":"event_msg","payload":{"type":"\#(event)"}}"#
+            if info([start, line]).completedTurnID != nil { fail("\(event) must not announce successful completion") }
+        }
         // --- unknown outputs resolve too ----------------------------------------
         // Matching on the *_call_output suffix means a future tool type does not
         // reintroduce this bug.

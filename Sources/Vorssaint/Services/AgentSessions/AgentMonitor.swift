@@ -211,6 +211,7 @@ final class AgentMonitor: ObservableObject {
             } else if row.kind == .codex,
                       let path = CodexSessions.rolloutPath(pid: row.pid, cwd: cwds[row.pid]) {
                 let info = CodexSessions.tailInfo(path: path)
+                session.completedTurnID = info.completedTurnID
                 session.transcriptPath = path
                 session.lastPrompt = info.lastPrompt
                 session.model = info.model

@@ -18,8 +18,8 @@ enum RolloutAssignment {
     /// Session origin is historical: a VS Code conversation may be resumed in
     /// a CLI. Exclude spawned helpers, not conversations by their original UI.
     static func conversationCwd(_ metadata: [String: Any]) -> String? {
-        if let source = metadata["source"] as? [String: Any], source["subagent"] != nil { return nil }
-        if metadata["source"] as? String == "subagent" { return nil }
+        if let source = metadata["source"] as? [String: Any], source["subagent"] != nil || source["internal"] != nil { return nil }
+        if let source = metadata["source"] as? String, ["subagent", "internal"].contains(source) { return nil }
         return metadata["cwd"] as? String
     }
 
