@@ -30,7 +30,14 @@ subagents and plans remain available there.
 
 Conversation messages render Markdown using the existing native Scratchpad
 parser/preview: headings, lists, emphasis, links and code retain their formatting
-and selectable content. In conversations the preview fits each message's height
+and selectable content. Each message has an explicit author header: You,
+Claude/Codex, or Terminal output for Claude's local command records. User messages
+have a subtle background; assistant messages retain a plain reading surface.
+Conversation text uses a 12-point base size and leaves room for the scrollbar.
+Local command output uses selectable monospaced text without Markdown, removing
+only its transport wrapper. Tool result payloads are not presented as user text;
+this is a recent-message view rather than a complete terminal capture.
+In conversations the preview fits each message's height
 and leaves scrolling to the transcript; the Scratchpad retains its original
 independent scrolling. Parsing is repeated only when the message/language changes.
 Task boxes in conversation content are read-only and never edit the transcript.

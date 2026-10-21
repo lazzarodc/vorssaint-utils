@@ -250,7 +250,13 @@ enum ClaudeSessions {
             switch obj["type"] as? String {
             case "user":
                 guard obj["isMeta"] as? Bool != true, let text = userText(obj), !text.isEmpty else { continue }
-                messages.append(ChatMessage(id: index, isUser: true, text: text))
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("<local-command-caveat>") { continue }
+                if let output = localCommandText(text) {
+                    guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                    messages.append(ChatMessage(id: index, source: .terminal, text: output))
+                } else {
+                    messages.append(ChatMessage(id: index, isUser: true, text: text))
+                }
                 index += 1
             case "assistant":
                 let texts = contentItems(obj)
@@ -259,7 +265,7 @@ enum ClaudeSessions {
                 let joined = texts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !joined.isEmpty else { continue }
                 // Consecutive assistant texts in one turn: merge into the last bubble.
-                if let last = messages.last, !last.isUser {
+                if let last = messages.last, last.source == .assistant {
                     messages[messages.count - 1] = ChatMessage(id: last.id, isUser: false, text: last.text + "\n\n" + joined)
                 } else {
                     messages.append(ChatMessage(id: index, isUser: false, text: joined))
@@ -270,6 +276,23 @@ enum ClaudeSessions {
             }
         }
         return Array(messages.suffix(limit))
+    }
+
+    /// Claude stores local command output under the user role. Preserve its
+    /// actual origin, removing only the known transport wrapper, not output markup.
+    private static func localCommandText(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for tag in ["local-command-stdout", "local-command-stderr", "command-name"] {
+            let opening = "<" + tag + ">", closing = "</" + tag + ">"
+            guard trimmed.hasPrefix(opening), let end = trimmed.range(of: closing) else { continue }
+            let value = String(trimmed[trimmed.index(trimmed.startIndex, offsetBy: opening.count)..<end.lowerBound])
+            if tag == "command-name", let args = trimmed.range(of: "<command-args>"),
+               let argsEnd = trimmed.range(of: "</command-args>", range: args.upperBound..<trimmed.endIndex) {
+                return (value + " " + trimmed[args.upperBound..<argsEnd.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            return value
+        }
+        return nil
     }
 
     // MARK: - Helpers

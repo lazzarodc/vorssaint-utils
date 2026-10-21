@@ -23,6 +23,7 @@ run ProcessNaming ProcessNaming
 run HookSettings HookSettings
 run RolloutAssignment RolloutAssignment
 run CodexPhase Agent TailRead RolloutAssignment CodexSessions
+run Conversation Agent TailRead RolloutAssignment ClaudeSessions CodexSessions
 run Sound Agent AgentSessionSoundSupport
 echo "▸ Monitor"
 swiftc "$source_dir/Agent.swift" "$source_dir/AgentSessionSoundSupport.swift" "$source_dir/AgentMonitor.swift" \

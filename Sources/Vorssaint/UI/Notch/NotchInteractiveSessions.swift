@@ -359,6 +359,7 @@ struct NotchInteractiveSessionDetail: View {
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .contentMargins(.trailing, 12, for: .scrollContent)
                 .onChange(of: messages) { _, new in
                     if let last = new.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
@@ -422,16 +423,8 @@ struct NotchInteractiveSessionDetail: View {
     private var transcript: some View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(messages) { message in
-                VStack(alignment: .leading, spacing: 4) {
-                    if message.isUser {
-                        Text(sessionString(.you)).font(.system(size: 9)).foregroundStyle(.secondary)
-                    } else {
-                        NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
-                            .frame(width: 17, height: 17).accessibilityLabel(agent.kind.displayName)
-                    }
-                    SessionMarkdownMessage(text: message.text, language: l10n.language).equatable()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }.id(message.id)
+                SessionTranscriptMessage(message: message, kind: agent.kind, language: l10n.language)
+                    .id(message.id)
             }
             if messages.isEmpty {
                 Text(sessionString(.noConversation)).font(.system(size: 11)).foregroundStyle(.secondary).padding(.vertical, 12)
@@ -473,13 +466,58 @@ struct NotchInteractiveSessionDetail: View {
     }
 }
 
+/// Authorship is explicit on every message; color is supplementary.
+private struct SessionTranscriptMessage: View {
+    let message: ChatMessage
+    let kind: AgentKind
+    let language: AppLanguage
+
+    private var author: String {
+        switch message.source {
+        case .user: return NotchAgentStrings.session(.you, language: language)
+        case .assistant: return kind.displayName
+        case .terminal: return NotchAgentStrings.session(.terminalOutput, language: language)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 5) {
+                if message.source == .assistant {
+                    NotchAgentMark(provider: kind == .claude ? .claude : .codex, size: 9)
+                        .frame(width: 13, height: 13).accessibilityHidden(true)
+                } else {
+                    Image(systemName: message.isUser ? "person.fill" : "terminal")
+                        .font(.system(size: 9)).frame(width: 13, height: 13).accessibilityHidden(true)
+                }
+                Text(author).font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(.white.opacity(0.85))
+            if message.source == .terminal {
+                Text(message.text).font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.8)).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                SessionMarkdownMessage(text: message.text, language: language).equatable()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(message.isUser ? 0.055 : message.source == .terminal ? 0.025 : 0),
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+}
+
 /// Parse only when a message or language changes, not on every monitor scan.
 private struct SessionMarkdownMessage: View, Equatable {
     let text: String
     let language: AppLanguage
     var body: some View {
         let strings = FeatureStrings.scratchpad(language)
-        MarkdownPreview(blocks: ScratchpadSupport.markdownPreview(text), baseSize: 11,
+        MarkdownPreview(blocks: ScratchpadSupport.markdownPreview(text), baseSize: 12,
                         fitsContent: true, textInset: .zero,
                         taskStates: (done: strings.taskDone, notDone: strings.taskNotDone))
     }

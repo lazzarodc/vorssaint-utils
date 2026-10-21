@@ -150,7 +150,19 @@ struct AgentSession: Identifiable, Equatable {
 }
 
 struct ChatMessage: Identifiable, Equatable {
+    enum Source: Equatable { case user, assistant, terminal }
     let id: Int
-    let isUser: Bool
+    let source: Source
     let text: String
+    var isUser: Bool { source == .user }
+
+    init(id: Int, source: Source, text: String) {
+        self.id = id
+        self.source = source
+        self.text = text
+    }
+
+    init(id: Int, isUser: Bool, text: String) {
+        self.init(id: id, source: isUser ? .user : .assistant, text: text)
+    }
 }
