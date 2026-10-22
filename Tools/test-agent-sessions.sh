@@ -25,12 +25,13 @@ run RolloutAssignment Agent TailRead RolloutAssignment CodexSessions
 run CodexPhase Agent TailRead RolloutAssignment CodexSessions
 run Conversation Agent TailRead RolloutAssignment ClaudeSessions CodexSessions
 run Preview Agent
+run VSCodeBridge VSCodeTerminalBridge
 run Sound Agent AgentSessionSoundSupport
 run WorkClock Agent AgentWorkClock
 run WorkTiming Agent TailRead RolloutAssignment ClaudeSessions CodexSessions
 echo "▸ Monitor"
 swiftc "$source_dir/Agent.swift" "$source_dir/AgentSessionSoundSupport.swift" "$source_dir/AgentWorkClock.swift" "$source_dir/AgentMonitor.swift" \
-    "$source_dir/ApprovalCenter.swift" "$source_dir/TerminalBridge.swift" \
+    "$source_dir/ApprovalCenter.swift" "$source_dir/TerminalBridge.swift" "$source_dir/VSCodeTerminalBridge.swift" \
     "$source_dir/ClaudeSessions.swift" "$source_dir/CodexSessions.swift" \
     "$source_dir/TailRead.swift" "$source_dir/RolloutAssignment.swift" \
     "$source_dir/ProcessNaming.swift" "$source_dir/HookSettings.swift" \

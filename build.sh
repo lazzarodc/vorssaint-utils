@@ -682,6 +682,7 @@ cp Resources/com.vorssaint.utils.fan-control.plist \
 cp Resources/Info.plist "$STAGE/Contents/Info.plist"
 cp CHANGELOG.md "$STAGE/Contents/Resources/CHANGELOG.md"
 cp Resources/AgentsIsland-LICENSE.txt "$STAGE/Contents/Resources/AgentsIsland-LICENSE.txt"
+python3 Tools/package-vscode-extension.py "$STAGE/Contents/Resources/vorssaint-terminal-focus.vsix"
 for lproj in Resources/*.lproj(N); do
     cp -R "$lproj" "$STAGE/Contents/Resources/"
 done

@@ -26,6 +26,9 @@ struct NotchAgentsSettingsControls: View {
     @AppStorage(DefaultsKey.notchAgentsPriceUpdates) private var priceUpdates = true
     @State private var hookInstalled = ApprovalCenter.hookInstalled
     @State private var hookFailed = false
+    @State private var installingVSCodeBridge = false
+    @State private var vscodeBridgeFailed = false
+    @State private var vscodeBridgeInstalled = false
     @State private var dragging: NotchAgentCard?
     @State private var roots: [AgentProvider: Bool] = [:]
     @State private var claudeApp: URL?
@@ -61,6 +64,25 @@ struct NotchAgentsSettingsControls: View {
                     }
                 }
                 if hookFailed { Text(sessionText(.hookFailed)).font(.caption).foregroundStyle(.orange) }
+            }
+            if claude || codex {
+                SettingsRow(symbol: "terminal", title: sessionText(.vscodeBridgeTitle), caption: sessionText(.vscodeBridgeHelp)) {
+                    Button(sessionText(.installVSCodeBridge)) {
+                        installingVSCodeBridge = true
+                        vscodeBridgeFailed = false
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let installed = VSCodeExtensionInstaller.install()
+                            DispatchQueue.main.async {
+                                installingVSCodeBridge = false
+                                vscodeBridgeFailed = !installed
+                                vscodeBridgeInstalled = installed
+                            }
+                        }
+                    }.disabled(installingVSCodeBridge)
+                    if installingVSCodeBridge { ProgressView().controlSize(.small) }
+                    else if vscodeBridgeInstalled { Text(sessionText(.done)).font(.caption).foregroundStyle(.secondary) }
+                }
+                if vscodeBridgeFailed { Text(sessionText(.vscodeBridgeFailed)).font(.caption).foregroundStyle(.orange) }
             }
 
             Divider()

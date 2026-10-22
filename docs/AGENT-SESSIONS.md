@@ -156,11 +156,10 @@ them or resume the work timer.
 
 Terminal targeting and state heuristics follow the reference. iTerm, Terminal,
 tmux, WezTerm and kitty have their respective routes. Jumping to an editor such
-as VS Code activates its running GUI application natively, resolving display
-aliases such as VS Code → Visual Studio Code without AppleScript Automation.
-This brings the editor forward; it does not select a particular integrated
-terminal tab or workspace. Generic text/key sending still uses simulated typing
-into the front window and may need Automation/Accessibility permissions.
+as VS Code uses the optional companion described below to focus its exact local
+terminal and owning window. VS Code never falls back to simulated typing into
+the front editor. Other generic terminal routes may still require macOS
+Automation/Accessibility permissions.
 Codex has no hook approval route.
 Disabling AI Agents stops polling and hook draining; suspending the island pauses
 this work too. Hiding the Live card also stops process and hook polling. A stopped scan cannot publish a late result. Provider preferences
@@ -257,3 +256,30 @@ editor window. Claude produced real Bash permission prompts, but this run did
 not establish their island display/clear lifecycle. Its AskUserQuestion tool was
 unavailable even with the default tool set, so no real question interaction was
 validated. These limitations are not counted as passing acceptance checks.
+
+## VS Code companion
+
+The optional extension lives in `extensions/vscode/` in this repository and is
+built into `vorssaint-terminal-focus.vsix` by `Tools/package-vscode-extension.py`.
+The app bundle includes it; AI Agents settings has an explicit installation
+button for VS Code's default profile. Installation does not reload existing
+windows automatically. Enable/install it per profile and reload those windows.
+Requires VS Code 1.143+, local trusted windows and local shell PIDs. It does not
+reuse code from Vibe Island. Other terminal integrations remain independent.
+
+Each window hosts a private Unix socket and a heartbeat registration in
+`/tmp/vorssaint-vscode-<uid>` (0700 directory, 0600 files/sockets). The app maps the
+agent's fresh process ancestry to a published shell PID; cwd is never a routing
+key. The owning extension focuses its own window and reveals the terminal, or
+sends text/raw keys directly through the terminal API. Missing, stale, closed or
+ambiguous targets fail instead of typing into an unrelated editor. Approvals and
+questions remain pending if sending fails. The temporary metadata has no prompts,
+terminal names, workspace paths or terminal output and is not settings backup data.
+
+Node socket tests and `Tools/test-vscode-bridge.sh` cover two fake window hosts,
+exact terminal selection, close/reload cleanup, UTF-8 replies, raw keys and native
+Swift-to-Node framing. These do not prove real multi-window desktop focus. Check
+that manually using two VS Code windows (including same-workspace windows), split
+terminals, a shell that has changed cwd, and an extension-disabled window; verify
+that the island stays open and sends only to the chosen session. Remote windows
+are deliberately excluded to prevent remote PIDs being mistaken for local ones.

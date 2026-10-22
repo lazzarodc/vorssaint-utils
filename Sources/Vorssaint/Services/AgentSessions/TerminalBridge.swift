@@ -20,6 +20,8 @@ enum TerminalBridge {
         let dev = agent.tty.map { "/dev/\($0)" }
 
         switch agent.terminalApp {
+        case "VS Code":
+            return VSCodeTerminalBridge.perform(.sendText, agentPid: agent.id, text: trimmed)
         case "tmux":
             return tmuxSend(text: trimmed, tty: dev)
         case "iTerm":
@@ -76,14 +78,17 @@ enum TerminalBridge {
         }
     }
 
-    static func jump(to agent: AgentSession) {
+    @discardableResult
+    static func jump(to agent: AgentSession) -> Bool {
         let dev = agent.tty.map { "/dev/\($0)" }
 
         switch agent.terminalApp {
+        case "VS Code":
+            return VSCodeTerminalBridge.perform(.focus, agentPid: agent.id)
         case "tmux":
             if let dev { tmuxSelectPane(tty: dev) }
         case "iTerm":
-            guard let dev else { return }
+            guard let dev else { return false }
             osascript("""
             tell application "iTerm"
                 activate
@@ -102,7 +107,7 @@ enum TerminalBridge {
             end tell
             """)
         case "Terminal":
-            guard let dev else { return }
+            guard let dev else { return false }
             osascript("""
             tell application "Terminal"
                 activate
@@ -141,8 +146,9 @@ enum TerminalBridge {
                 }
             }
         case nil:
-            break
+            return false
         }
+        return true
     }
 
     /// Send a single raw key (no Enter) to the agent's session — used to
@@ -152,6 +158,8 @@ enum TerminalBridge {
         let dev = agent.tty.map { "/dev/\($0)" }
 
         switch agent.terminalApp {
+        case "VS Code":
+            return VSCodeTerminalBridge.perform(.sendKey, agentPid: agent.id, text: key)
         case "tmux":
             guard let tmux = tmuxPath, let pane = tmuxPane(tty: dev) else { return false }
             _ = run(tmux, ["send-keys", "-t", pane, "-l", key])

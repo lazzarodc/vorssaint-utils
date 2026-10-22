@@ -235,6 +235,7 @@ struct NotchInteractiveSessionCard: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(sending)
             }
             replyBar // "Other" — type a custom answer
         }
@@ -247,12 +248,20 @@ struct NotchInteractiveSessionCard: View {
     /// Answer a choice: the digit selects the option in Claude's prompt and
     /// Enter confirms it (TerminalBridge.send types text + Enter).
     private func answerChoice(_ number: Int) {
-        ApprovalCenter.shared.clearQuestion(pid: agent.id)
+        guard !sending, let question = liveQuestion,
+              let response = ApprovalCenter.shared.beginQuestionResponse(pid: agent.id, question: question) else { return }
+        sending = true
         DispatchQueue.global(qos: .userInitiated).async {
-            TerminalBridge.send(text: String(number), to: agent)
+            let sent = TerminalBridge.send(text: String(number), to: agent)
+            DispatchQueue.main.async {
+                sending = false
+                ApprovalCenter.shared.finishQuestionResponse(pid: agent.id, response: response, sent: sent)
+                if sent {
+                    justSent = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { justSent = false }
+                }
+            }
         }
-        justSent = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { justSent = false }
     }
 
 

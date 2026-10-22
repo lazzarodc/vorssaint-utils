@@ -1477,7 +1477,16 @@ final class NotchService: ObservableObject {
                 sessionActivation.begin(processIdentifier: pid, now: Date())
             }
         }
-        DispatchQueue.global(qos: .userInitiated).async { TerminalBridge.jump(to: agent) }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let opened = TerminalBridge.jump(to: agent)
+            if !opened, agent.terminalApp == "VS Code" {
+                DispatchQueue.main.async {
+                    self?.show(NotchNotice(event: .agents, title: "VS Code",
+                        detail: NotchAgentStrings.session(.vscodeBridgeUnavailable, language: L10n.shared.language),
+                        symbol: "terminal"))
+                }
+            }
+        }
     }
 
     func collapse() {

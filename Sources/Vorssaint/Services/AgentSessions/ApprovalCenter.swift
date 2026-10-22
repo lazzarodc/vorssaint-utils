@@ -39,6 +39,7 @@ final class ApprovalCenter: ObservableObject {
     }
 
     @Published private(set) var pending: [Int32: Approval] = [:]
+    private var responding = Set<Int32>()
     init(initialApprovals: [Int32: Approval] = [:], initialQuestions: [Int32: QuestionEntry] = [:]) {
         pending = initialApprovals
         questions = initialQuestions
@@ -53,9 +54,29 @@ final class ApprovalCenter: ObservableObject {
         let question: PendingQuestion
         let at: Date
     }
+    struct QuestionResponse: Equatable {
+        let id = UUID()
+        let entry: QuestionEntry?
+    }
+    private var answeringQuestions: [Int32: QuestionResponse] = [:]
     @Published private(set) var questions: [Int32: QuestionEntry] = [:]
 
     func clearQuestion(pid: Int32) { questions[pid] = nil }
+    func registerQuestion(_ entry: QuestionEntry, pid: Int32) { questions[pid] = entry }
+
+    func beginQuestionResponse(pid: Int32, question: PendingQuestion) -> QuestionResponse? {
+        guard answeringQuestions[pid] == nil,
+              questions[pid] == nil || questions[pid]?.question == question else { return nil }
+        let response = QuestionResponse(entry: questions[pid])
+        answeringQuestions[pid] = response
+        return response
+    }
+
+    func finishQuestionResponse(pid: Int32, response: QuestionResponse, sent: Bool) {
+        guard answeringQuestions[pid] == response else { return }
+        answeringQuestions[pid] = nil
+        if sent, let entry = response.entry, questions[pid] == entry { questions[pid] = nil }
+    }
 
     private var monitoringStartedAt = Date.distantFuture
     private var timer: Timer?
@@ -78,6 +99,8 @@ final class ApprovalCenter: ObservableObject {
         monitoringStartedAt = .distantFuture
         pending = [:]
         questions = [:]
+        responding = []
+        answeringQuestions = [:]
     }
 
     // MARK: - Spool
@@ -123,7 +146,7 @@ final class ApprovalCenter: ObservableObject {
                         let entry = QuestionEntry(question: PendingQuestion(
                             prompt: prompt, options: options,
                             multiSelect: first["multiSelect"] as? Bool ?? false), at: Date())
-                        self.questions[pid] = entry
+                        self.registerQuestion(entry, pid: pid)
                     }
                 } else if event == "PostToolUse" {
                     self.questions[pid] = nil
@@ -192,15 +215,21 @@ final class ApprovalCenter: ObservableObject {
     // MARK: - Responding
 
     func respond(pid: Int32, action: Action) {
-        guard pending[pid] != nil,
+        guard !responding.contains(pid) else { return }
+        guard let approval = pending[pid],
               let agent = AgentMonitor.shared.agents.first(where: { $0.id == pid })
         else {
             pending[pid] = nil
             return
         }
-        pending[pid] = nil
-        DispatchQueue.global(qos: .userInitiated).async {
-            TerminalBridge.sendKey(action.key, to: agent)
+        responding.insert(pid)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let sent = TerminalBridge.sendKey(action.key, to: agent)
+            DispatchQueue.main.async {
+                self?.responding.remove(pid)
+                if sent, self?.pending[pid]?.at == approval.at,
+                   self?.pending[pid]?.sessionId == approval.sessionId { self?.pending[pid] = nil }
+            }
         }
     }
 

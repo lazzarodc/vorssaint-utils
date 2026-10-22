@@ -89,6 +89,22 @@ struct MonitorTests {
         precondition(questionCenter.questions[777] != nil && pausedScans == [10, 10],
                      "two busy scans must retain an unanswered hook question and keep work time paused")
         questionCenter.clearQuestion(pid: 777)
+        let choice = PendingQuestion(prompt: "Continue?", options: ["Yes", "No"], multiSelect: false)
+        let firstQuestion = ApprovalCenter.QuestionEntry(question: choice, at: questionAt)
+        questionCenter.registerQuestion(firstQuestion, pid: 777)
+        let firstResponse = questionCenter.beginQuestionResponse(pid: 777, question: choice)!
+        precondition(questionCenter.beginQuestionResponse(pid: 777, question: choice) == nil,
+                     "repeated clicks cannot send a second answer while acknowledgement is pending")
+        let nextQuestion = ApprovalCenter.QuestionEntry(question: choice, at: questionAt.addingTimeInterval(1))
+        questionCenter.registerQuestion(nextQuestion, pid: 777)
+        questionCenter.finishQuestionResponse(pid: 777, response: firstResponse, sent: true)
+        precondition(questionCenter.questions[777] == nextQuestion, "an old acknowledgement must not clear a newer question")
+        let failedResponse = questionCenter.beginQuestionResponse(pid: 777, question: choice)!
+        questionCenter.finishQuestionResponse(pid: 777, response: failedResponse, sent: false)
+        precondition(questionCenter.questions[777] == nextQuestion, "failed sends preserve the current question for retry")
+        let successfulResponse = questionCenter.beginQuestionResponse(pid: 777, question: choice)!
+        questionCenter.finishQuestionResponse(pid: 777, response: successfulResponse, sent: true)
+        precondition(questionCenter.questions[777] == nil, "an acknowledged answer clears only its own question")
         _ = questionClock.update([questionAgent], now: questionAt.addingTimeInterval(6))
         precondition(questionClock.update([questionAgent], now: questionAt.addingTimeInterval(8))[0].workDuration == 12,
                      "an explicit answer resumes the same work timer")
