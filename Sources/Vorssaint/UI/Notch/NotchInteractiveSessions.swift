@@ -23,6 +23,11 @@ private func localizedSessionActivity(_ activity: String) -> String {
     activity == "Thinking…" ? sessionString(.working) : activity
 }
 
+private func sessionWorkTime(_ agent: AgentSession) -> String {
+    guard let seconds = agent.workDuration else { return "—" }
+    return (agent.workDurationEstimated ? "≈ " : "") + AgentFormat.duration(seconds, locale: L10n.shared.language.formattingLocale())
+}
+
 private func jumpToSession(_ agent: AgentSession) {
     NotchService.shared.jumpToAgentSession(agent)
 }
@@ -69,7 +74,7 @@ struct NotchInteractiveSessionCard: View {
                                 HStack(spacing: 7) {
                                     Text(agent.displayTitle == agent.cwdDisplay ? agent.displayTitle : agent.cwdDisplay + " / " + agent.displayTitle)
                                         .font(.system(size: 11, weight: .semibold)).lineLimit(1)
-                                    Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
+                                    Text(sessionWorkTime(agent)).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
                                         .fixedSize(horizontal: true, vertical: false)
                                         .help(sessionString(.uptime))
                                 }
@@ -332,7 +337,7 @@ struct NotchInteractiveSessionDetail: View {
                 NotchAgentMark(provider: agent.kind == .claude ? .claude : .codex, size: 13)
                     .frame(width: 17, height: 17).help(agent.kind.displayName)
                 NotchAgentStatusIndicator(status: effectiveStatus)
-                Text(agent.elapsed).font(.system(size: 9)).foregroundStyle(.secondary).monospacedDigit().fixedSize()
+                Text(sessionWorkTime(agent)).font(.system(size: 9)).foregroundStyle(.secondary).monospacedDigit().fixedSize()
                     .help(sessionString(.uptime))
             }
             HStack(spacing: 8) {
@@ -442,7 +447,7 @@ struct NotchInteractiveSessionDetail: View {
             SessionInfoRow(label: sessionString(.directory), value: agent.cwd ?? "—")
             SessionInfoRow(label: "PID", value: "\(agent.id)")
             SessionInfoRow(label: "CPU", value: String(format: "%.1f%%", locale: L10n.shared.language.formattingLocale(), agent.cpu))
-            SessionInfoRow(label: sessionString(.uptime), value: agent.elapsed)
+            SessionInfoRow(label: sessionString(.uptime), value: sessionWorkTime(agent))
             Text(sessionString(.noConversation))
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))

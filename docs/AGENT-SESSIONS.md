@@ -28,8 +28,12 @@ remain separate; moving over the status does not split the highlight.
 Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Session rows have no separators; the limits footer retains its top divider.
-Elapsed time is the process's total session duration, including waiting; its
-localized tooltip and detail label identify it as session duration.
+Displayed time measures work on the current request, not process uptime. It
+pauses for permission, questions, ordinary waiting and completion, resumes for
+the same request and resets for a new request identity. Provider task/prompt
+metadata seeds existing work; historical wall-clock seeds with unknown pauses
+are marked ≈, and unavailable timing shows —. Disabling monitoring resets the
+in-memory clock. Large transcript tails retain the current request identity.
 The main row area opens the external
 terminal; if none is identified, it falls back to details. Switching apps through
 this action keeps the island open, just like switching sessions within iTerm.
@@ -128,13 +132,20 @@ controls across monitor scans. Claude's explicit `waitingFor` category and
 state timestamp distinguish a permission wait from a prompt that has already
 been answered, including tools that finish between scans. Older registries
 wait for an observed wait followed by resumed activity; exits and expiry also
-retire the request. The island offers one-time
+retire the request. A fresh matched hook emits only the approval sound, opens
+the session overview without taking terminal keyboard focus, and places its
+session before ordinary waiting conversations. Duplicate hook notifications do
+not reopen or repeat that sound. Completion sounds are suppressed during an
+explicit permission wait or while its approval is pending. The island offers one-time
 approval and cancellation with Escape; permanent permission choices remain in
 the terminal because their numbered positions vary across Claude versions. This installation is distinct from the
 original Agents Island hook. Removing it preserves unrelated commands, including
 commands sharing a hook entry. These external Claude settings are not Vorssaint
 preferences and are not exported in a Vorssaint settings backup. Conversation
 content, process IDs and the spool are transient machine state.
+Hook questions remain pending until a PostToolUse event or an explicit island
+answer, session exit or expiry; a busy registry snapshot alone cannot clear
+them or resume the work timer.
 
 Terminal targeting and state heuristics follow the reference. iTerm, Terminal,
 tmux, WezTerm and kitty have their respective routes. Jumping to an editor such

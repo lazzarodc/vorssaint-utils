@@ -59,6 +59,39 @@ struct MonitorTests {
         let legacyApproval = ApprovalCenter(initialApprovals: [firstScan.id: early])
         legacyApproval.sync(agents: [firstScan])
         precondition(legacyApproval.hasPending, "a legacy idle timestamp newer than the hook must not erase the request")
+        let incoming = ApprovalCenter()
+        var opened: [Int32] = []
+        let token = incoming.approvalRequested.sink { opened.append($0) }
+        AgentSessionSoundService.shared.events = []
+        incoming.register(approval, pid: 777, announce: true)
+        incoming.register(approval, pid: 777, announce: true)
+        precondition(opened == [777] && AgentSessionSoundService.shared.events == [.approvalNeeded],
+                     "one approval emits one opening and only the approval sound, without duplicate hook notifications")
+        token.cancel()
+        let waitingRows = [Int32(1), 777, 2].map { id in
+            AgentSession(id: id, kind: .claude, cpu: 0, elapsed: "1m", status: .waiting, bypassPermissions: false)
+        }
+        precondition(AgentSession.ordered(waitingRows, approvals: [777], questions: []).first?.id == 777,
+                     "a pending approval is above ordinary waiting sessions regardless of PID")
+        let questionAt = Date()
+        let questionCenter = ApprovalCenter(initialQuestions: [777: .init(
+            question: PendingQuestion(prompt: "Continue?", options: ["Yes", "No"], multiSelect: false), at: questionAt)])
+        var questionAgent = awaiting
+        questionAgent.status = .working
+        questionAgent.workTurn = AgentWorkTurn(id: "question-turn", startedAt: questionAt.addingTimeInterval(-10))
+        var questionClock = AgentWorkClock()
+        let pausedScans = [1.0, 5.0].map { offset in
+            let result = questionClock.update([questionAgent], now: questionAt.addingTimeInterval(offset),
+                                              questions: questionCenter.questions.mapValues(\.at))
+            questionCenter.sync(agents: result)
+            return result[0].workDuration
+        }
+        precondition(questionCenter.questions[777] != nil && pausedScans == [10, 10],
+                     "two busy scans must retain an unanswered hook question and keep work time paused")
+        questionCenter.clearQuestion(pid: 777)
+        _ = questionClock.update([questionAgent], now: questionAt.addingTimeInterval(6))
+        precondition(questionClock.update([questionAgent], now: questionAt.addingTimeInterval(8))[0].workDuration == 12,
+                     "an explicit answer resumes the same work timer")
         let runningNames: [String?] = ["Xcode", "iTerm2", nil, "Visual Studio Code"]
         guard TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: runningNames) == 3,
               TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: ["Xcode", "iTerm2"]) == nil,

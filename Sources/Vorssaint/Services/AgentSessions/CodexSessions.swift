@@ -25,6 +25,7 @@ enum CodexSessions {
         var todos: [Todo] = []
         var phase: Phase = .unknown
         var completedTurnID: String?
+        var workTurn: AgentWorkTurn?
     }
 
     private static let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -191,6 +192,7 @@ enum CodexSessions {
         let mtime = (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? nil
 
         lock.lock()
+        let previous = infoCache[path]?.info
         if let mtime, let cached = infoCache[path], cached.mtime == mtime {
             lock.unlock()
             return cached.info
@@ -198,6 +200,7 @@ enum CodexSessions {
         lock.unlock()
 
         var info = Info()
+        info.workTurn = previous?.workTurn
         var pendingCalls: [(id: String, description: String)] = []
         var resolvedCallIds = Set<String>()
 
@@ -225,6 +228,8 @@ enum CodexSessions {
 
         // Unresolved tool call = still working, even without task events.
         let unresolved = pendingCalls.last { !resolvedCallIds.contains($0.id) }
+        if info.phase == .unknown, let work = previous?.workTurn, work.endedAt == nil,
+           previous?.phase == .working { info.phase = .working }
         if info.phase == .unknown, unresolved != nil { info.phase = .working }
         if info.phase == .working {
             info.activity = unresolved?.description ?? "Thinking…"
@@ -291,12 +296,21 @@ enum CodexSessions {
         case "task_started":
             info.phase = .working
             info.completedTurnID = nil
+            if let id = (event["turn_id"] as? String) ?? timestamp {
+                info.workTurn = AgentWorkTurn(id: id, startedAt: AgentWorkTurn.date(event["started_at"] ?? timestamp))
+            }
         case "task_complete":
             info.phase = .waiting
             info.completedTurnID = (event["turn_id"] as? String) ?? timestamp
+            if let id = info.completedTurnID, info.workTurn?.id != id {
+                info.workTurn = AgentWorkTurn(id: id, startedAt: AgentWorkTurn.date(event["started_at"]))
+            }
+            info.workTurn?.endedAt = AgentWorkTurn.date(event["completed_at"] ?? timestamp)
+            info.workTurn?.reportedDuration = (event["duration_ms"] as? NSNumber).map { $0.doubleValue / 1000 }
         case "turn_aborted", "error", "shutdown_complete":
             info.phase = .waiting
             info.completedTurnID = nil
+            info.workTurn?.endedAt = AgentWorkTurn.date(timestamp)
         case "user_message":
             if let text = event["message"] as? String, isRealUserText(text) {
                 info.lastPrompt = text

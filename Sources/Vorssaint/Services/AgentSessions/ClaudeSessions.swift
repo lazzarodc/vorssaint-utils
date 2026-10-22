@@ -37,6 +37,7 @@ enum ClaudeSessions {
         var subagents: [Subagent] = []
         var plan: String?      // markdown from the last ExitPlanMode call
         var question: PendingQuestion?  // pending AskUserQuestion, if any
+        var workTurn: AgentWorkTurn?
     }
 
     private static let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -135,6 +136,7 @@ enum ClaudeSessions {
         let mtime = (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? nil
 
         cacheLock.lock()
+        let previous = infoCache[path]?.info
         if let mtime, let cached = infoCache[path], cached.mtime == mtime {
             cacheLock.unlock()
             return cached.info
@@ -142,6 +144,7 @@ enum ClaudeSessions {
         cacheLock.unlock()
 
         var info = TranscriptInfo()
+        info.workTurn = previous?.workTurn
         var pendingTools: [(id: String, description: String)] = []
         var resolvedToolIds = Set<String>()
         // Newest user text in the window; only consulted when the session's own
@@ -159,6 +162,11 @@ enum ClaudeSessions {
             case "last-prompt":
                 if let p = obj["lastPrompt"] as? String, !p.isEmpty { info.lastPrompt = p }
             case "assistant":
+                if obj["isSidechain"] as? Bool != true,
+                   let reason = (obj["message"] as? [String: Any])?["stop_reason"] as? String,
+                   ["end_turn", "stop_sequence", "max_tokens", "refusal"].contains(reason) {
+                    info.workTurn?.endedAt = AgentWorkTurn.date(obj["timestamp"])
+                }
                 if let message = obj["message"] as? [String: Any],
                    let model = message["model"] as? String, !model.isEmpty {
                     info.model = model
@@ -209,6 +217,12 @@ enum ClaudeSessions {
                 for item in contentItems(obj) where item["type"] as? String == "tool_result" {
                     if let id = item["tool_use_id"] as? String { resolvedToolIds.insert(id) }
                 }
+                if obj["isMeta"] as? Bool != true, obj["isSidechain"] as? Bool != true,
+                   let text = userText(obj), isWorkRequest(text),
+                   !text.isEmpty, localCommandText(text) == nil,
+                   let id = (obj["uuid"] as? String) ?? (obj["timestamp"] as? String) {
+                    info.workTurn = AgentWorkTurn(id: id, startedAt: AgentWorkTurn.date(obj["timestamp"]))
+                }
                 // Fallback prompt, used only if no last-prompt entry appears
                 // anywhere in the window. Keeping the *newest* matters: the old
                 // `info.lastPrompt == nil` guard made the first match win and
@@ -219,6 +233,15 @@ enum ClaudeSessions {
                 if obj["isMeta"] as? Bool != true,
                    let text = userText(obj), !text.isEmpty {
                     fallbackPrompt = text
+                }
+            case "system":
+                if obj["subtype"] as? String == "turn_duration",
+                   let milliseconds = obj["durationMs"] as? NSNumber {
+                    if info.workTurn == nil {
+                        info.workTurn = AgentWorkTurn(id: (obj["uuid"] as? String) ?? (obj["timestamp"] as? String) ?? "duration")
+                    }
+                    info.workTurn?.reportedDuration = milliseconds.doubleValue / 1000
+                    info.workTurn?.endedAt = AgentWorkTurn.date(obj["timestamp"])
                 }
             default:
                 break
@@ -344,6 +367,12 @@ enum ClaudeSessions {
             .filter { $0["type"] as? String == "text" }
             .compactMap { $0["text"] as? String }
         return texts.isEmpty ? nil : texts.joined(separator: "\n")
+    }
+
+    private static func isWorkRequest(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.hasPrefix("<local-command-caveat>")
+            && !trimmed.hasPrefix("[Request interrupted by user")
     }
 
     private static func describeTool(name: String, input: [String: Any]) -> String {

@@ -4001,6 +4001,9 @@ final class NotchService: ObservableObject {
             NotchDownloadService.shared.onFailure = { [weak self] in self?.reactMascot(.confused) }
         }
         if modules.contains(.agents) {
+            ApprovalCenter.shared.approvalRequested.receive(on: DispatchQueue.main)
+                .sink { [weak self] pid in self?.showAgentApproval(pid: pid) }
+                .store(in: &subscriptions)
             AgentMonitor.shared.$agents
                 .map { $0.map(\.id) }.removeDuplicates().dropFirst()
                 .receive(on: DispatchQueue.main)
@@ -4100,6 +4103,13 @@ final class NotchService: ObservableObject {
         }
         // The companion loves being plugged in, so it listens for the charger too.
         if NotchSupport.routes(.battery) || idleContent == .battery || NotchMascotSupport.isEnabled() { startPower() }
+    }
+
+    private func showAgentApproval(pid: Int32) {
+        guard running, !suspended, modules.contains(.agents),
+              ApprovalCenter.shared.pending[pid] != nil else { return }
+        pageLayers[.agents]?()
+        open(.agents, takeFocus: false, feedback: false)
     }
 
     private func showAgentEvent(_ event: AgentUsageEvent) {

@@ -51,6 +51,10 @@ enum NotchScreenRefreshContract {
     enum Bundle {
         static let main = RunningApplication(bundleIdentifier: "com.vorssaint.tests.notch")
     }
+    enum ApprovalCenter {
+        static let shared = Center()
+        final class Center { var pending: [Int32: Bool] = [:] }
+    }
     enum ClipboardHistoryService {
         static let shared = History()
         final class History {
@@ -123,6 +127,13 @@ enum NotchScreenRefreshContract {
         var panel: Panel? = Panel()
         var windowHost: Host? = Host()
         var modules: [NotchModule] = [.controls]
+        var pageLayers: [NotchModule: () -> Void] = [:]
+        var openedModules: [NotchModule] = []
+        var openedWithFocus: Bool?
+        func open(_ module: NotchModule, takeFocus: Bool, feedback: Bool) {
+            openedModules.append(module)
+            openedWithFocus = takeFocus
+        }
         var pinned = false
         var keepsWorkingSurface = false
         var openedByHover = false
@@ -173,6 +184,22 @@ enum NotchScreenRefreshContract {
             NSWorkspace.shared.frontmostApplication = nil
             ClipboardHistoryService.shared.remembered = 0
         }
+        let approvalPresentation = Service()
+        approvalPresentation.modules = [.agents]
+        var closedDetail = false
+        approvalPresentation.pageLayers[.agents] = { closedDetail = true }
+        ApprovalCenter.shared.pending[777] = true
+        approvalPresentation.showAgentApproval(pid: 777)
+        suite.expect(approvalPresentation.openedModules == [.agents] && approvalPresentation.openedWithFocus == false && closedDetail,
+                     "a live approval opens the session overview without stealing keyboard focus from the terminal")
+        ApprovalCenter.shared.pending = [:]
+        approvalPresentation.showAgentApproval(pid: 777)
+        suite.expect(approvalPresentation.openedModules.count == 1, "a resolved queued approval must not reopen the island")
+        approvalPresentation.suspended = true
+        ApprovalCenter.shared.pending[777] = true
+        approvalPresentation.showAgentApproval(pid: 777)
+        suite.expect(approvalPresentation.openedModules.count == 1, "a suspended island does not open for approval")
+        ApprovalCenter.shared.pending = [:]
         let service = Service()
         let preferences = Service()
         for _ in 0..<100 { preferences.schedulePreferenceSync() }

@@ -28,7 +28,7 @@ final class AgentSessionSoundService {
     let library = AgentSessionSoundLibrary()
 
     func update(agents: [AgentSession]) {
-        for event in tracker.update(agents) { playEvent(event) }
+        for event in tracker.update(agents, approvalPids: Set(ApprovalCenter.shared.pending.keys)) { playEvent(event) }
     }
 
     func stop() {

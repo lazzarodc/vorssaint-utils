@@ -86,6 +86,27 @@ struct PendingQuestion: Equatable {
     let multiSelect: Bool
 }
 
+/// Identity and lifecycle of one user request, independent of process uptime.
+struct AgentWorkTurn: Equatable {
+    var id: String
+    var startedAt: Date?
+    var endedAt: Date?
+    var reportedDuration: TimeInterval?
+
+    static func date(_ value: Any?) -> Date? {
+        if let value = value as? NSNumber {
+            let seconds = value.doubleValue
+            return seconds.isFinite ? Date(timeIntervalSince1970: seconds > 100_000_000_000 ? seconds / 1000 : seconds) : nil
+        }
+        guard let text = value as? String else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: text) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: text)
+    }
+}
+
 struct AgentSession: Identifiable, Equatable {
     let id: Int32 // pid
     let kind: AgentKind
@@ -108,6 +129,9 @@ struct AgentSession: Identifiable, Equatable {
     /// Claude's explicit registry state; nil means an older/unknown format.
     var waitingForPermission: Bool?
     var stateUpdatedAt: Date?
+    var workTurn: AgentWorkTurn?
+    var workDuration: TimeInterval?
+    var workDurationEstimated = false
     var transcriptPath: String?
     var model: String?         // raw model id from the transcript, e.g. "claude-opus-4-8"
     var gitBranch: String?     // current branch of the session's cwd
@@ -115,6 +139,16 @@ struct AgentSession: Identifiable, Equatable {
     var plan: String?          // markdown from the last ExitPlanMode call
     var pendingQuestion: PendingQuestion?  // an AskUserQuestion awaiting an answer
     var remoteHost: String?    // set for sessions discovered over SSH
+
+    /// Actual permission requests precede other waiting conversations.
+    static func ordered(_ agents: [AgentSession], approvals: Set<Int32>, questions: Set<Int32>) -> [AgentSession] {
+        func rank(_ agent: AgentSession) -> Int {
+            if approvals.contains(agent.id) || agent.waitingForPermission == true { return 0 }
+            if questions.contains(agent.id) || agent.pendingQuestion != nil { return 1 }
+            switch agent.status { case .waiting: return 2; case .working: return 3; case .idle: return 4 }
+        }
+        return agents.sorted { (rank($0), $0.id) < (rank($1), $1.id) }
+    }
 
     /// "claude-opus-4-8" → "Opus 4.8", "claude-sonnet-5" → "Sonnet 5",
     /// "gpt-5-codex" → "GPT 5 Codex", "o4-mini" → "O4 Mini".

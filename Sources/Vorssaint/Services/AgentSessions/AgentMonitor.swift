@@ -31,6 +31,7 @@ final class AgentMonitor: ObservableObject {
     private let queue = DispatchQueue(label: "com.vorssaint.agent-sessions", qos: .utility)
     private var generation = 0
     private var scanning = false
+    private var workClock = AgentWorkClock()
     private var enabled: Set<AgentKind> = []
 
     /// Called with the host's preferences, on the main thread. The usage
@@ -66,6 +67,7 @@ final class AgentMonitor: ObservableObject {
         agents = []
         ApprovalCenter.shared.stop()
         AgentSessionSoundService.shared.stop()
+        workClock.reset()
     }
 
     func scanNow() {
@@ -84,9 +86,12 @@ final class AgentMonitor: ObservableObject {
             DispatchQueue.main.async {
                 self.scanning = false
                 guard token == self.generation, !self.enabled.isEmpty else { return }
-                AgentSessionSoundService.shared.update(agents: found)
-                if self.agents != found { self.agents = found }
-                ApprovalCenter.shared.sync(agents: found)
+                let approvals = ApprovalCenter.shared.pending.mapValues(\.at)
+                let questions = ApprovalCenter.shared.questions.mapValues(\.at)
+                let timed = self.workClock.update(found, now: Date(), approvals: approvals, questions: questions)
+                AgentSessionSoundService.shared.update(agents: timed)
+                if self.agents != timed { self.agents = timed }
+                ApprovalCenter.shared.sync(agents: timed)
             }
         }
     }
@@ -189,6 +194,7 @@ final class AgentMonitor: ObservableObject {
                 let info = ClaudeSessions.tailInfo(path: path)
                 // meta.name carries a hash suffix ("myproj-0d") — prefer the AI
                 // title, then fall back to the clean cwd basename in the view.
+                session.workTurn = info.workTurn
                 session.title = info.title
                 session.lastPrompt = info.lastPrompt
                 session.lastMessage = info.lastMessage
@@ -214,6 +220,7 @@ final class AgentMonitor: ObservableObject {
                       let path = CodexSessions.rolloutPath(pid: row.pid, cwd: cwds[row.pid]) {
                 let info = CodexSessions.tailInfo(path: path)
                 session.completedTurnID = info.completedTurnID
+                session.workTurn = info.workTurn
                 session.transcriptPath = path
                 session.lastPrompt = info.lastPrompt
                 session.model = info.model

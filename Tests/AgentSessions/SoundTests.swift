@@ -5,10 +5,18 @@ import Foundation
 @main
 struct SoundTests {
     static func session(_ pid: Int32, _ status: AgentStatus, kind: AgentKind = .claude) -> AgentSession {
-        AgentSession(id: pid, kind: kind, cpu: 0, elapsed: "1m", cwd: "/tmp/project",
-                     status: status, terminalApp: "iTerm", tty: "ttys001", bypassPermissions: false)
+        var agent = AgentSession(id: pid, kind: kind, cpu: 0, elapsed: "1m", cwd: "/tmp/project",
+                                 status: status, terminalApp: "iTerm", tty: "ttys001", bypassPermissions: false)
+        agent.waitingForPermission = false
+        return agent
     }
     static func main() {
+        var permissionSound = AgentSessionSoundTracker()
+        _ = permissionSound.update([session(7, .working)])
+        var permissionWait = session(7, .waiting)
+        permissionWait.waitingForPermission = true
+        precondition(permissionSound.update([permissionWait]).isEmpty,
+                     "waiting for approval must not also emit a task-completed sound")
         var codex = AgentSessionSoundTracker()
         _ = codex.update([session(9, .working, kind: .codex)])
         precondition(codex.update([session(9, .waiting, kind: .codex)]).isEmpty,

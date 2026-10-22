@@ -47,13 +47,8 @@ struct NotchAgentsView: View {
     private var cards: [NotchAgentCard] { _ = (cardOrder, hiddenCards); return NotchAgentSupport.cards() }
     private var interactiveSessions: [AgentSession] {
         guard cards.contains(.live) else { return [] }
-        return monitor.agents.sorted {
-            let left = needsAttention($0), right = needsAttention($1)
-            return left != right ? left : $0.id < $1.id
-        }
-    }
-    private func needsAttention(_ agent: AgentSession) -> Bool {
-        agent.status == .waiting || approvals.pending[agent.id] != nil || approvals.questions[agent.id] != nil || agent.pendingQuestion != nil
+        return AgentSession.ordered(monitor.agents, approvals: Set(approvals.pending.keys),
+                                    questions: Set(approvals.questions.keys))
     }
     private var legacyProviders: [AgentProvider] { providers.filter { $0 == .opencode || $0 == .copilot } }
     private var limitTiles: [NotchAgentTile] {
@@ -83,6 +78,11 @@ struct NotchAgentsView: View {
             usage.pageDidAppear(preview: preview); accounts.pageDidAppear(preview: preview)
             syncPresentation()
         }
+        .onReceive(approvals.approvalRequested) { _ in
+            guard !preview else { return }
+            selectedSession = nil
+            page = .sessions
+        }
         .onChange(of: page) { _, _ in syncPresentation() }
         .onChange(of: selectedSession) { _, _ in syncPresentation() }
         .onChange(of: monitor.agents.map(\.id)) { _, ids in
@@ -106,25 +106,38 @@ struct NotchAgentsView: View {
 
     private func overview(now: Date) -> some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    if interactiveSessions.isEmpty {
-                        Text(label(.noSessions)).font(.system(size: 11)).foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity).padding(.vertical, 20)
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if interactiveSessions.isEmpty {
+                            Text(label(.noSessions)).font(.system(size: 11)).foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity).padding(.vertical, 20)
+                        }
+                        ForEach(interactiveSessions) { agent in
+                            NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }.id(agent.id)
+                        }
+                        if cards.contains(.live), !legacyProviders.isEmpty {
+                            NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)
+                                .frame(height: NotchAgentSupport.cardHeight)
+                        }
                     }
-                    ForEach(interactiveSessions) { agent in
-                        NotchInteractiveSessionCard(agent: agent) { selectedSession = agent.id }
-                    }
-                    if cards.contains(.live), !legacyProviders.isEmpty {
-                        NotchAgentLiveCard(snapshot: usage.snapshot, providers: legacyProviders, text: text)
-                            .frame(height: NotchAgentSupport.cardHeight)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 6)
+                    .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["sessions": geometry.size.height]) })
+                }
+                .padding(.horizontal, -6)
+                .onReceive(approvals.approvalRequested) { pid in scroll.scrollTo(pid, anchor: .top) }
+                .onChange(of: interactiveSessions.map(\.id)) { _, _ in
+                    if let first = interactiveSessions.first, approvals.pending[first.id] != nil {
+                        scroll.scrollTo(first.id, anchor: .top)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 6)
-                .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["sessions": geometry.size.height]) })
+                .onAppear {
+                    if let first = interactiveSessions.first, approvals.pending[first.id] != nil {
+                        scroll.scrollTo(first.id, anchor: .top)
+                    }
+                }
             }
-            .padding(.horizontal, -6)
             footer(now: now)
                 .background(GeometryReader { geometry in Color.clear.preference(key: AgentOverviewHeightKey.self, value: ["footer": geometry.size.height]) })
         }

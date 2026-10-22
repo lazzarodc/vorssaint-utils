@@ -39,11 +39,13 @@ final class ApprovalCenter: ObservableObject {
     }
 
     @Published private(set) var pending: [Int32: Approval] = [:]
-    init(initialApprovals: [Int32: Approval] = [:]) {
+    init(initialApprovals: [Int32: Approval] = [:], initialQuestions: [Int32: QuestionEntry] = [:]) {
         pending = initialApprovals
+        questions = initialQuestions
     }
 
     var hasPending: Bool { !pending.isEmpty }
+    let approvalRequested = PassthroughSubject<Int32, Never>()
 
     /// Live AskUserQuestion prompts, delivered by the PreToolUse hook the moment
     /// the question opens (the transcript only records it after it's answered).
@@ -155,19 +157,21 @@ final class ApprovalCenter: ObservableObject {
             let announce = AgentSessionSoundPolicy.shouldAnnounceApproval(writtenAt: writtenAt,
                                                                          monitoringStartedAt: monitoringStartedAt)
             try? fm.removeItem(atPath: path) // matched → consume
-            let agent = AgentMonitor.shared.agents.first { $0.id == pid }
-            let toolName = tool
-            let isNew = self.pending[pid] == nil
-            do {
-                self.pending[pid] = Approval(
-                    sessionId: sessionId,
-                    message: message,
-                    toolName: toolName,
-                    at: writtenAt ?? Date(),
-                    activityAtCreate: agent?.activity
-                )
-                if isNew, agent != nil, announce { AgentSessionSoundService.shared.playEvent(.approvalNeeded) }
-            }
+            register(Approval(sessionId: sessionId, message: message, toolName: tool,
+                              at: writtenAt ?? Date(),
+                              activityAtCreate: AgentMonitor.shared.agents.first { $0.id == pid }?.activity),
+                     pid: pid, announce: announce)
+        }
+    }
+
+    /// A new matched hook emits one presentation event and its approval sound.
+    /// Repeated Notification/PermissionRequest copies only refresh the request.
+    func register(_ approval: Approval, pid: Int32, announce: Bool) {
+        let isNew = pending[pid] == nil
+        pending[pid] = approval
+        if isNew, announce {
+            AgentSessionSoundService.shared.playEvent(.approvalNeeded)
+            approvalRequested.send(pid)
         }
     }
 
@@ -212,12 +216,11 @@ final class ApprovalCenter: ObservableObject {
         guard hasPending || !questions.isEmpty else { return }
         let byPid = Dictionary(agents.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // Questions: answered in the terminal (agent busy again), session gone,
-        // or stale → drop. The PostToolUse hook usually clears them first.
+        // A busy registry can predate the question hook. Only PostToolUse or an
+        // explicit island response proves it was answered; exit/TTL clean leftovers.
         for (pid, entry) in questions {
             let agent = byPid[pid]
-            if agent == nil || agent?.status == .working
-                || Date().timeIntervalSince(entry.at) > 30 * 60 {
+            if agent == nil || Date().timeIntervalSince(entry.at) > 30 * 60 {
                 questions[pid] = nil
             }
         }

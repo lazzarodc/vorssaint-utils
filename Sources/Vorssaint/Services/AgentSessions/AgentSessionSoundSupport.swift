@@ -25,7 +25,7 @@ struct AgentSessionSoundTracker {
 
     mutating func reset() { previous = nil }
 
-    mutating func update(_ agents: [AgentSession]) -> [AgentSessionSoundEvent] {
+    mutating func update(_ agents: [AgentSession], approvalPids: Set<Int32> = []) -> [AgentSessionSoundEvent] {
         let current = Dictionary(agents.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         defer { previous = current }
         guard let previous else { return [] }
@@ -37,7 +37,9 @@ struct AgentSessionSoundTracker {
                 return .completed
             }
             switch (old.status, agent.status) {
-            case (.working, .waiting): return agent.kind == .claude ? .completed : nil
+            case (.working, .waiting):
+                return agent.kind == .claude && agent.waitingForPermission == false
+                    && !approvalPids.contains(agent.id) ? .completed : nil
             case (.waiting, .working), (.idle, .working): return .acknowledged
             default: return nil
             }

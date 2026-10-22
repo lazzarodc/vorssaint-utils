@@ -19,5 +19,6 @@ final class AgentSessionSoundService {
     static let shared = AgentSessionSoundService()
     func update(agents: [AgentSession]) {}
     func stop() {}
-    func playEvent(_ event: AgentSessionSoundEvent) {}
+    var events: [AgentSessionSoundEvent] = []
+    func playEvent(_ event: AgentSessionSoundEvent) { events.append(event) }
 }
