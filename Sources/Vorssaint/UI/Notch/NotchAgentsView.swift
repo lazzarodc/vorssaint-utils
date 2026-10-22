@@ -207,10 +207,10 @@ struct NotchAgentsView: View {
                                         if let id = tile.accountID {
                                             if let state = codexAccounts.first(where: { $0.id == id }) {
                                                 NotchAgentResetsCard(now: now, text: text, profile: state.profile)
-                                                    .id(state.profile.directory).padding(.leading, 23)
+                                                    .id(state.profile.directory)
                                             }
                                         } else {
-                                            NotchAgentResetsCard(now: now, text: text).padding(.leading, 23)
+                                            NotchAgentResetsCard(now: now, text: text)
                                         }
                                     }
                                 }
@@ -991,23 +991,24 @@ private struct NotchAgentResetsCard: View {
         Group {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text(text.resetsCard).font(.system(size: 10.5, weight: .semibold))
+                    Text(text.resetsCard)
+                        .font(.system(size: 9.5, weight: .medium)).foregroundStyle(.secondary)
                     if let summary = resets.summary {
                         Text(summary.available.formatted(.number.locale(locale)))
                             .font(.system(size: 11, weight: .semibold)).monospacedDigit()
                             .foregroundStyle(tint)
                     }
-                    Spacer(minLength: 6)
                     if resets.checking { ProgressView().controlSize(.mini) }
                     if let summary = resets.summary, summary.available > 0,
                        !resets.redeeming, !confirming, finished == nil {
                         useButton
                     }
+                    Spacer(minLength: 0)
                 }
                 content
             }
         }
-        .padding(.bottom, 8)
+        .padding(.vertical, 8)
         .help(text.resetsHelp)
         .onAppear { resets.refreshIfStale() }
         // A count that changed while the question was open asks again.
@@ -1058,12 +1059,10 @@ private struct NotchAgentResetsCard: View {
                                 Text(description).font(.system(size: 9)).foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            HStack(spacing: 6) {
-                                Image(systemName: "hourglass").frame(width: 17)
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Image(systemName: "hourglass")
                                 if let date = reset.expiresAt {
-                                    Text(date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale)))
-                                    Spacer(minLength: 6)
-                                    Text(date.formatted(.relative(presentation: .named).locale(locale)))
+                                    expiration(date)
                                 } else {
                                     Text("—")
                                 }
@@ -1076,6 +1075,21 @@ private struct NotchAgentResetsCard: View {
                 }
             } else {
                 line(text.resetsNone)
+            }
+        }
+    }
+
+    private func expiration(_ date: Date) -> some View {
+        let absolute = date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale))
+        let relative = date.formatted(.relative(presentation: .named).locale(locale))
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                Text(absolute)
+                Text(relative).font(.system(size: 9))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(absolute)
+                Text(relative).font(.system(size: 9))
             }
         }
     }

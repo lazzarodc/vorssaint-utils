@@ -79,9 +79,11 @@ both pin CODEX_HOME to that profile; an invalid home never falls back to another
 account. The implicit default card explicitly uses ~/.codex. Fresh reset limits
 update only the corresponding account. Hiding Limits still leaves the account
 header when Resets is enabled.
-The resets header keeps the count beside its title and the use action on the
-same row. Available reset credits list their expiration date/time and relative
-expiry, soonest first; expirations within a day are highlighted. Count-only
+The resets subsection aligns to its account's meters without an extra left
+indent. Its quieter header groups the count and use action beside the title.
+Expiration dates and relative expiry stay together at the leading edge, stacking
+when the island is too narrow for both. Available reset credits list their
+expiration date/time and relative expiry, soonest first; expirations within a day are highlighted. Count-only
 answers do not invent dates. Reset type, title and description are preserved;
 provided titles and descriptions appear alongside each expiration. Codex decides
 which eligible windows a redemption renews; confirmation does not promise a
