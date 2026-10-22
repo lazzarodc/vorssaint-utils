@@ -30,6 +30,9 @@ gray circle. Localized status text remains available to accessibility and hover.
 Session rows have no separators; the limits footer retains its top divider.
 Claude and Codex rows show the latest assistant message while waiting or idle,
 and the current activity while working, falling back to the latest user prompt.
+Message and prompt previews use plain text extracted with the native Markdown
+parser; headings, emphasis and link syntax stay out of the single-line list.
+The original Markdown remains intact in details, and tool activity stays literal.
 Codex retains observed preview messages across large appended tool results that
 push them outside its bounded transcript tail; truncation clears that preview.
 Displayed time measures work on the current request, not process uptime. It

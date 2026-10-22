@@ -24,6 +24,7 @@ run HookSettings HookSettings
 run RolloutAssignment Agent TailRead RolloutAssignment CodexSessions
 run CodexPhase Agent TailRead RolloutAssignment CodexSessions
 run Conversation Agent TailRead RolloutAssignment ClaudeSessions CodexSessions
+run Preview Agent
 run Sound Agent AgentSessionSoundSupport
 run WorkClock Agent AgentWorkClock
 run WorkTiming Agent TailRead RolloutAssignment ClaudeSessions CodexSessions

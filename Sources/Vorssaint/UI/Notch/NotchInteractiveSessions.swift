@@ -78,7 +78,7 @@ struct NotchInteractiveSessionCard: View {
                                         .fixedSize(horizontal: true, vertical: false)
                                         .help(sessionString(.uptime))
                                 }
-                                Text(localizedSessionActivity((agent.status == .working ? agent.activity : agent.lastMessage) ?? agent.lastPrompt ?? ""))
+                                Text(localizedSessionActivity(agent.listPreview))
                                     .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)

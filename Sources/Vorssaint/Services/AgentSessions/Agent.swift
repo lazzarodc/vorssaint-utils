@@ -140,6 +140,24 @@ struct AgentSession: Identifiable, Equatable {
     var pendingQuestion: PendingQuestion?  // an AskUserQuestion awaiting an answer
     var remoteHost: String?    // set for sessions discovered over SSH
 
+    var listPreview: String {
+        if status == .working, let activity { return activity }
+        let message = (status == .working ? nil : lastMessage) ?? lastPrompt ?? ""
+        guard let parsed = try? AttributedString(markdown: message,
+            options: .init(interpretedSyntax: .full, failurePolicy: .returnPartiallyParsedIfPossible)) else {
+            return message
+        }
+        var text = ""
+        var previousBlock: Int?
+        for run in parsed.runs {
+            let block = run.presentationIntent?.components.first?.identity
+            if let previousBlock, block != previousBlock { text += " " }
+            text += String(parsed[run.range].characters)
+            previousBlock = block
+        }
+        return text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
     /// Actual permission requests precede other waiting conversations.
     static func ordered(_ agents: [AgentSession], approvals: Set<Int32>, questions: Set<Int32>) -> [AgentSession] {
         func rank(_ agent: AgentSession) -> Int {
