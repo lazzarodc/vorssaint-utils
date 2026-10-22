@@ -5,6 +5,60 @@ import Foundation
 @main
 struct MonitorTests {
     static func main() {
+        var awaiting = AgentSession(id: 777, kind: .claude, cpu: 0, elapsed: "2m", cwd: "/tmp/test",
+                                    status: .waiting, terminalApp: "iTerm", tty: "ttys001", bypassPermissions: false)
+        let approval = ApprovalCenter.Approval(sessionId: "test", message: "approval required",
+            toolName: "Write", at: Date(), activityAtCreate: "Writing file")
+        let center = ApprovalCenter(initialApprovals: [awaiting.id: approval])
+        center.sync(agents: [awaiting])
+        precondition(center.pending[awaiting.id] != nil,
+                     "a Claude session waiting for permission must keep its approval controls after a scan")
+        awaiting.status = .working
+        awaiting.activity = "Running next tool"
+        center.sync(agents: [awaiting])
+        precondition(center.pending[awaiting.id] == nil, "work resuming clears an approval answered in the terminal")
+        let unchanged = ApprovalCenter(initialApprovals: [awaiting.id: approval])
+        awaiting.activity = approval.activityAtCreate
+        unchanged.sync(agents: [awaiting])
+        precondition(unchanged.hasPending, "the hook can precede the registry waiting state; unchanged work must not drop it")
+        unchanged.sync(agents: [])
+        precondition(!unchanged.hasPending, "a session that exits must drop its pending approval")
+        let stale = ApprovalCenter.Approval(sessionId: "old", message: "old", toolName: "Write",
+                                          at: Date().addingTimeInterval(-601), activityAtCreate: nil)
+        let expired = ApprovalCenter(initialApprovals: [awaiting.id: stale])
+        awaiting.status = .waiting
+        expired.sync(agents: [awaiting])
+        precondition(!expired.hasPending, "stale approvals expire even while the session is waiting")
+        precondition(ApprovalCenter.Action.deny.key == "\u{1B}", "denial cancels with Escape instead of choosing a variable numbered option")
+        let early = ApprovalCenter.Approval(sessionId: "early", message: "permission", toolName: "Write",
+                                            at: Date(), activityAtCreate: nil)
+        var firstScan = awaiting
+        firstScan.status = .working
+        firstScan.activity = "Thinking…"
+        firstScan.waitingForPermission = false
+        firstScan.stateUpdatedAt = early.at.addingTimeInterval(-1)
+        let beforeRegistry = ApprovalCenter(initialApprovals: [firstScan.id: early])
+        beforeRegistry.sync(agents: [firstScan])
+        precondition(beforeRegistry.hasPending, "the first busy scan predating the hook must not erase the approval")
+        firstScan.status = .waiting
+        firstScan.waitingForPermission = true
+        firstScan.stateUpdatedAt = early.at.addingTimeInterval(0.1)
+        beforeRegistry.sync(agents: [firstScan])
+        precondition(beforeRegistry.hasPending, "explicit permission wait keeps the approval")
+        firstScan.waitingForPermission = false
+        firstScan.stateUpdatedAt = early.at.addingTimeInterval(1)
+        beforeRegistry.sync(agents: [firstScan])
+        precondition(!beforeRegistry.hasPending, "an answer that finishes between scans must retire the approval while still waiting")
+        let alreadyAnswered = ApprovalCenter(initialApprovals: [firstScan.id: early])
+        alreadyAnswered.sync(agents: [firstScan])
+        precondition(!alreadyAnswered.hasPending, "a resolved registry state newer than the hook retires an already-answered request")
+        let legacy = ClaudeSessions.Meta(pid: firstScan.id, sessionId: "legacy", cwd: "/tmp/test", name: nil,
+                                        status: "idle", statusUpdatedAt: nil, waitingFor: nil)
+        precondition(legacy.waitingForPermission == nil, "missing waitingFor is unknown, not a resolved permission")
+        firstScan.waitingForPermission = legacy.waitingForPermission
+        let legacyApproval = ApprovalCenter(initialApprovals: [firstScan.id: early])
+        legacyApproval.sync(agents: [firstScan])
+        precondition(legacyApproval.hasPending, "a legacy idle timestamp newer than the hook must not erase the request")
         let runningNames: [String?] = ["Xcode", "iTerm2", nil, "Visual Studio Code"]
         guard TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: runningNames) == 3,
               TerminalBridge.activationTargetIndex(appNamed: "VS Code", runningNames: ["Xcode", "iTerm2"]) == nil,

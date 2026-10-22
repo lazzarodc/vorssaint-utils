@@ -105,6 +105,9 @@ struct AgentSession: Identifiable, Equatable {
     var activity: String?      // e.g. "Writing middleware.ts"
     /// Explicit root-turn completion; inferred waiting/CPU pauses are not completions.
     var completedTurnID: String?
+    /// Claude's explicit registry state; nil means an older/unknown format.
+    var waitingForPermission: Bool?
+    var stateUpdatedAt: Date?
     var transcriptPath: String?
     var model: String?         // raw model id from the transcript, e.g. "claude-opus-4-8"
     var gitBranch: String?     // current branch of the session's cwd

@@ -182,6 +182,8 @@ final class AgentMonitor: ObservableObject {
 
             if row.kind == .claude, let meta = claudeMetas[row.pid] {
                 session.cwd = meta.cwd
+                session.waitingForPermission = meta.waitingForPermission
+                session.stateUpdatedAt = meta.statusUpdatedAt.map { Date(timeIntervalSince1970: $0 / 1000) }
                 let path = ClaudeSessions.transcriptPath(for: meta)
                 session.transcriptPath = path
                 let info = ClaudeSessions.tailInfo(path: path)

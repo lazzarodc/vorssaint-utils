@@ -18,6 +18,13 @@ enum ClaudeSessions {
         let name: String?
         let status: String?         // "busy" | "idle"
         let statusUpdatedAt: Double? // epoch ms
+        let waitingFor: String?
+
+        var waitingForPermission: Bool? {
+            guard let waitingFor else { return nil }
+            if status == "busy" { return false }
+            return waitingFor.localizedCaseInsensitiveContains("permission")
+        }
     }
 
     struct TranscriptInfo: Equatable {
@@ -56,7 +63,8 @@ enum ClaudeSessions {
                 cwd: cwd,
                 name: obj["name"] as? String,
                 status: obj["status"] as? String,
-                statusUpdatedAt: (obj["statusUpdatedAt"] as? NSNumber)?.doubleValue
+                statusUpdatedAt: (obj["statusUpdatedAt"] as? NSNumber)?.doubleValue,
+                waitingFor: obj["waitingFor"] as? String
             )
         }
         return result

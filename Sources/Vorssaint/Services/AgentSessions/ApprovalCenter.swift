@@ -12,9 +12,9 @@ import Combine
 /// A Claude Code **Notification hook** (installed via Settings → Integrations)
 /// writes each notification's JSON to ~/.claude/vorssaint/notifications/.
 /// This center watches that spool, matches "needs your permission" events to
-/// running sessions, and answers the terminal prompt by sending the digit
-/// keys: 1 = Yes, 2 = Yes for this session, 3 = No. The hook never blocks
-/// Claude — the terminal prompt stays usable in parallel.
+/// running sessions, and answers the terminal prompt with its first approval
+/// option or Escape to cancel. Numbered denial options vary by Claude version.
+/// The hook never blocks Claude; the terminal prompt stays usable in parallel.
 final class ApprovalCenter: ObservableObject {
     static let shared = ApprovalCenter()
 
@@ -24,21 +24,25 @@ final class ApprovalCenter: ObservableObject {
         let toolName: String?
         let at: Date
         var activityAtCreate: String?
+        var observedWaiting = false
     }
 
     enum Action {
-        case approve, alwaysAllow, deny
+        case approve, deny
 
         var key: String {
             switch self {
             case .approve: return "1"
-            case .alwaysAllow: return "2"
-            case .deny: return "3"
+            case .deny: return "\u{1B}"
             }
         }
     }
 
     @Published private(set) var pending: [Int32: Approval] = [:]
+    init(initialApprovals: [Int32: Approval] = [:]) {
+        pending = initialApprovals
+    }
+
     var hasPending: Bool { !pending.isEmpty }
 
     /// Live AskUserQuestion prompts, delivered by the PreToolUse hook the moment
@@ -159,7 +163,7 @@ final class ApprovalCenter: ObservableObject {
                     sessionId: sessionId,
                     message: message,
                     toolName: toolName,
-                    at: Date(),
+                    at: writtenAt ?? Date(),
                     activityAtCreate: agent?.activity
                 )
                 if isNew, agent != nil, announce { AgentSessionSoundService.shared.playEvent(.approvalNeeded) }
@@ -220,11 +224,28 @@ final class ApprovalCenter: ObservableObject {
 
         guard hasPending else { return }
         for (pid, approval) in pending {
-            let agent = byPid[pid]
-            let answeredInTerminal = agent.map {
-                $0.status == .waiting || $0.activity != approval.activityAtCreate
-            } ?? true
-            if answeredInTerminal || Date().timeIntervalSince(approval.at) > 10 * 60 {
+            guard let agent = byPid[pid], Date().timeIntervalSince(approval.at) <= 10 * 60 else {
+                pending[pid] = nil
+                continue
+            }
+            if agent.waitingForPermission == true {
+                if !approval.observedWaiting { pending[pid]?.observedWaiting = true }
+                continue
+            }
+            // A modern registry distinguishes a permission prompt from an
+            // ordinary waiting prompt, even if the tool finished between scans.
+            // Ignore a busy snapshot predating the hook's first publication.
+            if agent.waitingForPermission == false,
+               approval.observedWaiting || agent.stateUpdatedAt.map({ $0 >= approval.at }) == true {
+                pending[pid] = nil
+                continue
+            }
+            // Older registries lack waitingFor. First observe the wait before
+            // interpreting resumed work; enrichment on the first scan isn't an answer.
+            if agent.waitingForPermission == nil, agent.status == .waiting {
+                if !approval.observedWaiting { pending[pid]?.observedWaiting = true }
+            } else if approval.observedWaiting, agent.status == .working,
+                      agent.activity != approval.activityAtCreate {
                 pending[pid] = nil
             }
         }

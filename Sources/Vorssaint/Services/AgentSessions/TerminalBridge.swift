@@ -158,13 +158,14 @@ enum TerminalBridge {
             return true
         case "iTerm":
             guard let dev else { return false }
+            let value = key == "\u{1B}" ? "(ASCII character 27)" : "\"\(escaped(key))\""
             return osascript("""
             tell application "iTerm"
                 repeat with w in windows
                     repeat with t in tabs of w
                         repeat with s in sessions of t
                             if tty of s is "\(dev)" then
-                                tell s to write text "\(escaped(key))" newline NO
+                                tell s to write text \(value) newline NO
                                 return
                             end if
                         end repeat
@@ -184,9 +185,10 @@ enum TerminalBridge {
             // Terminal.app & friends have no raw-key API; activate the right
             // window first, then synthesize the keystroke (needs Accessibility).
             jump(to: agent)
+            let command = key == "\u{1B}" ? "key code 53" : "keystroke \"\(escaped(key))\""
             return osascript("""
             delay 0.3
-            tell application "System Events" to keystroke "\(escaped(key))"
+            tell application "System Events" to \(command)
             """)
         case nil:
             return false

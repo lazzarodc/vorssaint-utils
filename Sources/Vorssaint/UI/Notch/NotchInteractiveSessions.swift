@@ -71,6 +71,7 @@ struct NotchInteractiveSessionCard: View {
                                         .font(.system(size: 11, weight: .semibold)).lineLimit(1)
                                     Text(agent.elapsed).font(.system(size: 9)).monospacedDigit().foregroundStyle(.secondary)
                                         .fixedSize(horizontal: true, vertical: false)
+                                        .help(sessionString(.uptime))
                                 }
                                 Text(localizedSessionActivity((agent.status == .waiting ? agent.lastMessage : agent.activity) ?? agent.lastPrompt ?? ""))
                                     .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
@@ -106,8 +107,8 @@ struct NotchInteractiveSessionCard: View {
         }
     }
 
-    /// "Needs approval: Bash" + Approve / Always / Deny, answering the
-    /// terminal prompt (1 / 2 / 3) without leaving the island.
+    /// Approve once or cancel the terminal prompt. Permanent permissions stay
+    /// in the terminal, whose numbered choices vary across Claude versions.
     private var approvalBar: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 5) {
@@ -123,11 +124,13 @@ struct NotchInteractiveSessionCard: View {
                 SessionApprovalButton(label: sessionString(.approve), tint: AgentStatus.working.color) {
                     ApprovalCenter.shared.respond(pid: agent.id, action: .approve)
                 }
-                SessionApprovalButton(label: sessionString(.alwaysAllow), tint: .white.opacity(0.75)) {
-                    ApprovalCenter.shared.respond(pid: agent.id, action: .alwaysAllow)
-                }
                 SessionApprovalButton(label: sessionString(.deny), tint: Color(red: 1.0, green: 0.45, blue: 0.45)) {
                     ApprovalCenter.shared.respond(pid: agent.id, action: .deny)
+                }
+                if agent.terminalApp != nil {
+                    SessionApprovalButton(label: sessionString(.terminal), tint: .white.opacity(0.75)) {
+                        jumpToSession(agent)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -330,6 +333,7 @@ struct NotchInteractiveSessionDetail: View {
                     .frame(width: 17, height: 17).help(agent.kind.displayName)
                 NotchAgentStatusIndicator(status: effectiveStatus)
                 Text(agent.elapsed).font(.system(size: 9)).foregroundStyle(.secondary).monospacedDigit().fixedSize()
+                    .help(sessionString(.uptime))
             }
             HStack(spacing: 8) {
                 Text([agent.cwdDisplay, agent.gitBranch, agent.modelDisplay].compactMap { $0 }.joined(separator: " · "))
