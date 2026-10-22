@@ -28,6 +28,10 @@ remain separate; moving over the status does not split the highlight.
 Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Session rows have no separators; the limits footer retains its top divider.
+Claude and Codex rows show the latest assistant message while waiting or idle,
+and the current activity while working, falling back to the latest user prompt.
+Codex retains observed preview messages across large appended tool results that
+push them outside its bounded transcript tail; truncation clears that preview.
 Displayed time measures work on the current request, not process uptime. It
 pauses for permission, questions, ordinary waiting and completion, resumes for
 the same request and resets for a new request identity. Provider task/prompt

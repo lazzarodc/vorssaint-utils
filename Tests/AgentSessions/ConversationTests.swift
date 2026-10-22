@@ -46,6 +46,30 @@ struct ConversationTests {
         ])
         precondition(CodexSessions.recentMessages(path: codex).map(\.source) == [.user, .assistant],
                      "Codex tool output is not attributed to the user or assistant")
+        precondition(CodexSessions.tailInfo(path: codex).lastMessage == "Answer",
+                     "the Codex list preview receives the assistant response already visible in details")
+        let largeResult = try JSONSerialization.data(withJSONObject: ["type": "response_item", "payload": [
+            "type": "function_call_output", "output": String(repeating: "x", count: 600_000)]])
+        let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: codex))
+        try handle.seekToEnd()
+        try handle.write(contentsOf: largeResult + Data([10]))
+        try handle.close()
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(2)], ofItemAtPath: codex)
+        let afterLargeResult = CodexSessions.tailInfo(path: codex)
+        precondition(afterLargeResult.lastMessage == "Answer" && afterLargeResult.lastPrompt == "Question",
+                     "large appended tool results cannot erase an already observed preview or prompt")
+        let replacement = try write("codex.jsonl", [
+            ["type": "message", "role": "assistant", "content": [["type": "output_text", "text": "  New answer\n"]]],
+            ["type": "message", "role": "assistant", "content": [["type": "output_text", "text": " \n"]]],
+            ["type": "message", "role": "user", "content": [["type": "input_text", "text": "Next question"]]],
+            ["type": "function_call_output", "output": "tool result"]
+        ])
+        let replacedInfo = CodexSessions.tailInfo(path: replacement)
+        precondition(replacedInfo.lastMessage == "New answer" && replacedInfo.lastPrompt == "Next question",
+                     "flat messages update the preview; empty assistant text, user text and tools cannot replace the answer")
+        let truncated = try write("codex.jsonl", [["type": "event_msg", "payload": ["type": "task_started"]]])
+        precondition(CodexSessions.tailInfo(path: truncated).lastMessage == nil,
+                     "a truncated transcript cannot inherit a cached assistant response")
         print("✅ ConversationTests: authors, terminal output, tool filtering and recent-message cap passed")
     }
 }

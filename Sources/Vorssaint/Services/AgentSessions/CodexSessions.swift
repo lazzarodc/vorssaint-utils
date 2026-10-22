@@ -20,6 +20,7 @@ enum CodexSessions {
 
     struct Info: Equatable {
         var lastPrompt: String?
+        var lastMessage: String?
         var activity: String?
         var model: String?
         var todos: [Todo] = []
@@ -186,14 +187,17 @@ enum CodexSessions {
 
     // MARK: - Rollout tail parsing
 
-    private static var infoCache: [String: (mtime: Date, info: Info)] = [:]
+    private static var infoCache: [String: (mtime: Date, size: UInt64, info: Info)] = [:]
 
     static func tailInfo(path: String) -> Info {
-        let mtime = (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? nil
+        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+        let mtime = attributes?[.modificationDate] as? Date
+        let size = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
 
         lock.lock()
-        let previous = infoCache[path]?.info
-        if let mtime, let cached = infoCache[path], cached.mtime == mtime {
+        let cached = infoCache[path]
+        let previous = cached?.info
+        if let mtime, let cached, cached.mtime == mtime, cached.size == size {
             lock.unlock()
             return cached.info
         }
@@ -201,6 +205,12 @@ enum CodexSessions {
 
         var info = Info()
         info.workTurn = previous?.workTurn
+        // Rollouts append: retain observed messages when large tool results push
+        // them out of the bounded tail. Rewrites without growth start fresh.
+        if let cached, size > cached.size {
+            info.lastPrompt = cached.info.lastPrompt
+            info.lastMessage = cached.info.lastMessage
+        }
         var pendingCalls: [(id: String, description: String)] = []
         var resolvedCallIds = Set<String>()
 
@@ -237,7 +247,7 @@ enum CodexSessions {
 
         if let mtime {
             lock.lock()
-            infoCache[path] = (mtime, info)
+            infoCache[path] = (mtime, size, info)
             lock.unlock()
         }
         return info
@@ -251,6 +261,9 @@ enum CodexSessions {
             guard let role = item["role"] as? String else { return }
             if role == "user", let text = messageText(item), isRealUserText(text) {
                 info.lastPrompt = text
+            } else if role == "assistant", let text = messageText(item)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !text.isEmpty {
+                info.lastMessage = text
             }
         case "function_call":
             let id = item["call_id"] as? String ?? item["id"] as? String ?? ""

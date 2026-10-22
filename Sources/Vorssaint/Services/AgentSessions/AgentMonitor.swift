@@ -223,6 +223,7 @@ final class AgentMonitor: ObservableObject {
                 session.workTurn = info.workTurn
                 session.transcriptPath = path
                 session.lastPrompt = info.lastPrompt
+                session.lastMessage = info.lastMessage
                 session.model = info.model
                 session.todos = info.todos
 
