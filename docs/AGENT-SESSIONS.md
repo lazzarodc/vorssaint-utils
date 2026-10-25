@@ -28,6 +28,9 @@ remain separate; moving over the status does not split the highlight.
 Active/waiting indicators are filled green/amber; idle is a hollow
 gray circle. Localized status text remains available to accessibility and hover.
 Session rows have no separators; the limits footer retains its top divider.
+The last measured overview height is retained while the island is collapsed.
+Recreating the page leaves that height in place until content is measured again;
+details and usage panels use their own reading budget without overwriting it.
 Claude and Codex rows show the latest assistant message while waiting or idle,
 and the current activity while working, falling back to the latest user prompt.
 Message and prompt previews use plain text extracted with the native Markdown

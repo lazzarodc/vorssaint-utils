@@ -225,6 +225,7 @@ final class NotchService: ObservableObject {
     /// What a page shows over its own content, such as the mixer's options or
     /// the month grid, and how to close it; Escape closes it before the page.
     private var pageLayers: [NotchModule: () -> Void] = [:]
+    /// Last measured overview, retained while its SwiftUI page is unmounted.
     private var reportedAgentsHeight: CGFloat?
     private var trackingMenu = false
     /// The home page's controls as the preferences last saved them, read with
@@ -2005,16 +2006,24 @@ final class NotchService: ObservableObject {
         }
     }
 
-    /// A page reports the layer it shows over its content with how to close
-    /// it, and nil once the layer or the page is gone.
-    /// Intrinsic overview height, or the full reading budget of an open panel.
-    func setAgentsContentHeight(_ height: CGFloat?) {
-        guard reportedAgentsHeight != height else { return }
-        reportedAgentsHeight = height
+    /// Keep the overview measurement between visits. A layer changes the
+    /// reading budget without overwriting it, and both changes resize together.
+    func setAgentsPresentation(overviewHeight: CGFloat?, close: (() -> Void)?) {
+        let layerChanged = (pageLayers[.agents] != nil) != (close != nil)
+        pageLayers[.agents] = close
+        var heightChanged = false
+        if close == nil, let overviewHeight, overviewHeight.isFinite, overviewHeight > 0,
+           reportedAgentsHeight != overviewHeight {
+            reportedAgentsHeight = overviewHeight
+            heightChanged = true
+        }
+        guard layerChanged || heightChanged else { return }
         objectWillChange.send()
         refreshPresentation()
     }
 
+    /// A page reports the layer it shows over its content with how to close
+    /// it, and nil once the layer or the page is gone.
     func setPageLayer(_ module: NotchModule, close: (() -> Void)?) {
         pageLayers[module] = close
     }

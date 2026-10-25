@@ -1748,6 +1748,7 @@ enum NotchTests {
         NotchCaptureKeyboardTests.run(suite)
         NotchKeyMonitorTests.run(suite)
         NotchCommandBarHeightTests.run(suite)
+        NotchAgentsOpeningTests.run(suite)
         NotchDownloadProgressTests.run(suite)
         NotchSliderEditingTests.run(suite)
         NotchFileToolsTests.run(suite)

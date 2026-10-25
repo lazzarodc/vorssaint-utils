@@ -1143,6 +1143,14 @@ def main():
     write("NotchKeyMonitor.swift", "import Foundation\nextension NotchKeyMonitorTests {\nfinal class Service: State {\n"
           + declaration(notch, "    private func installEventMonitors()").replace("private func", "func", 1)
           + "}\n}\n")
+    agents_view = "Sources/Vorssaint/UI/Notch/NotchAgentsView.swift"
+    write("NotchAgentsOpening.swift", "import Foundation\nextension NotchAgentsOpeningTests {\nfinal class Service: State {\n"
+          + declaration(notch, "    func setAgentsPresentation(")
+          + "}\nfinal class AgentPage: PageState {\n"
+          + declaration(agents_view, "    private func syncPresentation()").replace("private func", "func", 1)
+              .replace("selectedSession = nil; page = .sessions", "self.selectedSession = nil; self.page = .sessions")
+          + declaration(agents_view, "        .onDisappear {", scope="struct NotchAgentsView: View {").replace("        .onDisappear {", "    func disappear() {", 1)
+          + "}\n}\n")
     write("NotchCommandBarHeight.swift", "import Foundation\nextension NotchCommandBarHeightTests {\nfinal class Service: State {\n"
           + declaration(notch, "    fileprivate func commandBarDidClose()").replace("fileprivate func", "func", 1)
           + declaration(notch, "    func updateCommandBarHeight(")

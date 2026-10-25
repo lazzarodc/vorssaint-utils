@@ -91,17 +91,15 @@ struct NotchAgentsView: View {
         .onDisappear {
             guard !preview else { return }
             NotchService.shared.setPageLayer(.agents, close: nil)
-            NotchService.shared.setAgentsContentHeight(nil)
             usage.pageDidDisappear(); accounts.pageDidDisappear()
         }
     }
 
     private func syncPresentation() {
         guard !preview else { return }
-        NotchService.shared.setPageLayer(.agents, close: hasLayer ? {
+        NotchService.shared.setAgentsPresentation(overviewHeight: overviewHeight, close: hasLayer ? {
             selectedSession = nil; page = .sessions
         } : nil)
-        NotchService.shared.setAgentsContentHeight(hasLayer ? NotchLayout.pageContentHeight : overviewHeight)
     }
 
     private func overview(now: Date) -> some View {
