@@ -1766,3 +1766,23 @@ extension NotchAgentStrings {
         .zhHK: "限額與用量|用量與記錄|返回|%@ 個工作階段|%@ 個待處理|沒有開啟的工作階段",
     ].mapValues { $0.components(separatedBy: "|") }
 }
+
+/// Titles of the session and sound rows in Settings, as properties so Settings
+/// search can follow each one back to its translation.
+struct NotchAgentSessionSettingsStrings {
+    let language: AppLanguage
+
+    static func localized(_ language: AppLanguage) -> NotchAgentSessionSettingsStrings { .init(language: language) }
+
+    var soundsEnabled: String { NotchAgentStrings.sound(.enabled, language: language) }
+    var soundVolume: String { NotchAgentStrings.sound(.volume, language: language) }
+    var sessionStartedSound: String { NotchAgentStrings.sound(.started, language: language) }
+    var taskCompletedSound: String { NotchAgentStrings.sound(.completed, language: language) }
+    var taskAcknowledgedSound: String { NotchAgentStrings.sound(.acknowledged, language: language) }
+    var approvalNeededSound: String { NotchAgentStrings.sound(.approvalNeeded, language: language) }
+    var quietHours: String { NotchAgentStrings.sound(.quietHours, language: language) }
+    var quietFrom: String { NotchAgentStrings.sound(.from, language: language) }
+    var quietUntil: String { NotchAgentStrings.sound(.until, language: language) }
+    var hookTitle: String { NotchAgentStrings.session(.hookTitle, language: language) }
+    var vscodeBridgeTitle: String { NotchAgentStrings.session(.vscodeBridgeTitle, language: language) }
+}

@@ -18,14 +18,15 @@ struct NotchAgentSoundsSettings: View {
     @State private var customSounds: [String] = []
     @State private var fileFailed = false
     private let service = AgentSessionSoundService.shared
+    private var titles: NotchAgentSessionSettingsStrings { .localized(l10n.language) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(text(.title)).font(.subheadline.weight(.medium))
-            SettingsRow(symbol: "speaker.wave.2", title: text(.enabled)) {
+            SettingsRow(symbol: "speaker.wave.2", title: titles.soundsEnabled) {
                 Toggle(text(.enabled), isOn: $enabled).labelsHidden().toggleStyle(.switch)
             }
-            SettingsRow(symbol: "speaker.wave.1", title: text(.volume)) {
+            SettingsRow(symbol: "speaker.wave.1", title: titles.soundVolume) {
                 HStack(spacing: 8) {
                     Slider(value: $volume, in: 0...1) { editing in
                         if !editing {
@@ -37,23 +38,28 @@ struct NotchAgentSoundsSettings: View {
                         .font(.caption).monospacedDigit().frame(width: 42, alignment: .trailing)
                 }
             }
-            ForEach(AgentSessionSoundEvent.allCases) { event in
-                NotchAgentSoundPicker(event: event, customSounds: customSounds)
-            }
+            soundRow(titles.sessionStartedSound, event: .started)
+            soundRow(titles.taskCompletedSound, event: .completed)
+            soundRow(titles.taskAcknowledgedSound, event: .acknowledged)
+            soundRow(titles.approvalNeededSound, event: .approvalNeeded)
             Text(text(.hookHint)).font(.caption).foregroundStyle(.secondary)
 
             Text(text(.quietHours)).font(.subheadline.weight(.medium))
-            SettingsRow(symbol: "moon", title: text(.quietHours)) {
+            SettingsRow(symbol: "moon", title: titles.quietHours) {
                 Toggle(text(.quietHours), isOn: $quietEnabled).labelsHidden().toggleStyle(.switch)
             }
-            timeRow(.from, selection: $quietStart)
-            timeRow(.until, selection: $quietEnd)
+            timeRow(titles.quietFrom, selection: $quietStart)
+            timeRow(titles.quietUntil, selection: $quietEnd)
             Text(text(.quietHint)).font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(text(.mySounds)).font(.subheadline.weight(.medium))
             ForEach(customSounds, id: \.self) { name in
-                SettingsRow(symbol: "waveform", title: name) {
+                // A file the person added names no setting, so it is not a searchable row.
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform").foregroundStyle(.secondary).frame(width: 20)
+                    Text(name).lineLimit(1).truncationMode(.middle)
+                    Spacer(minLength: 8)
                     HStack {
                         Button { service.preview(AgentSessionSoundLibrary.customPrefix + name) } label: {
                             Image(systemName: "play.circle")
@@ -78,9 +84,15 @@ struct NotchAgentSoundsSettings: View {
         NotchAgentStrings.sound(key, language: l10n.language)
     }
 
-    private func timeRow(_ key: NotchAgentSoundText, selection: Binding<Int>) -> some View {
-        SettingsRow(symbol: "clock", title: text(key)) {
-            Picker(text(key), selection: selection) {
+    private func soundRow(_ title: String, event: AgentSessionSoundEvent) -> some View {
+        SettingsRow(symbol: "waveform", title: title) {
+            NotchAgentSoundPicker(event: event, title: title, customSounds: customSounds)
+        }
+    }
+
+    private func timeRow(_ title: String, selection: Binding<Int>) -> some View {
+        SettingsRow(symbol: "clock", title: title) {
+            Picker(title, selection: selection) {
                 ForEach(0..<48, id: \.self) { slot in
                     Text(String(format: "%02d:%02d", locale: l10n.language.formattingLocale(), slot / 2, (slot % 2) * 30))
                         .tag(slot * 30)
@@ -103,45 +115,35 @@ struct NotchAgentSoundsSettings: View {
 
 private struct NotchAgentSoundPicker: View {
     let event: AgentSessionSoundEvent
+    let title: String
     let customSounds: [String]
     @ObservedObject private var l10n = L10n.shared
     @AppStorage private var selection: String
 
-    init(event: AgentSessionSoundEvent, customSounds: [String]) {
+    init(event: AgentSessionSoundEvent, title: String, customSounds: [String]) {
         self.event = event
+        self.title = title
         self.customSounds = customSounds
         _selection = AppStorage(wrappedValue: event.defaultSound, event.preferenceKey)
     }
 
     var body: some View {
-        SettingsRow(symbol: "waveform", title: title) {
-            HStack(spacing: 8) {
-                Picker(title, selection: $selection) {
-                    Text(FeatureStrings.notchAgents(l10n.language).off).tag(AgentSessionSoundService.off)
-                    ForEach(customSounds, id: \.self) { name in
-                        Text("♪ " + name).tag(AgentSessionSoundLibrary.customPrefix + name)
-                    }
-                    ForEach(AgentSessionSoundService.systemSounds, id: \.self) { name in Text(name).tag(name) }
-                }.labelsHidden().frame(width: 130)
-                Button { AgentSessionSoundService.shared.preview(selection) } label: {
-                    Image(systemName: "play.circle")
+        HStack(spacing: 8) {
+            Picker(title, selection: $selection) {
+                Text(FeatureStrings.notchAgents(l10n.language).off).tag(AgentSessionSoundService.off)
+                ForEach(customSounds, id: \.self) { name in
+                    Text("♪ " + name).tag(AgentSessionSoundLibrary.customPrefix + name)
                 }
-                .help(NotchAgentStrings.sound(.preview, language: l10n.language))
-                .accessibilityLabel(NotchAgentStrings.sound(.preview, language: l10n.language))
-                .disabled(selection == AgentSessionSoundService.off)
+                ForEach(AgentSessionSoundService.systemSounds, id: \.self) { name in Text(name).tag(name) }
+            }.labelsHidden().frame(width: 130)
+            Button { AgentSessionSoundService.shared.preview(selection) } label: {
+                Image(systemName: "play.circle")
             }
+            .help(NotchAgentStrings.sound(.preview, language: l10n.language))
+            .accessibilityLabel(NotchAgentStrings.sound(.preview, language: l10n.language))
+            .disabled(selection == AgentSessionSoundService.off)
         }
         .onChange(of: selection) { _, name in AgentSessionSoundService.shared.preview(name) }
     }
 
-    private var title: String {
-        let key: NotchAgentSoundText
-        switch event {
-        case .started: key = .started
-        case .completed: key = .completed
-        case .acknowledged: key = .acknowledged
-        case .approvalNeeded: key = .approvalNeeded
-        }
-        return NotchAgentStrings.sound(key, language: l10n.language)
-    }
 }

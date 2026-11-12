@@ -37,6 +37,7 @@ struct NotchAgentsSettingsControls: View {
     @State private var claudeAppFileCheck: Date?
 
     private var text: NotchAgentStrings { FeatureStrings.notchAgents(l10n.language) }
+    private var titles: NotchAgentSessionSettingsStrings { .localized(l10n.language) }
     private var locale: Locale { l10n.language.formattingLocale() }
 
     private var orderedCards: [NotchAgentCard] {
@@ -58,7 +59,7 @@ struct NotchAgentsSettingsControls: View {
             if claude { ClaudeAccountSettings() }
             if codex { CodexAccountsSettings() }
             if claude {
-                SettingsRow(symbol: "terminal", title: sessionText(.hookTitle), caption: sessionText(.hookHelp)) {
+                SettingsRow(symbol: "terminal", title: titles.hookTitle, caption: sessionText(.hookHelp)) {
                     Button(sessionText(hookInstalled ? .removeHook : .installHook)) {
                         let ok = hookInstalled ? ApprovalCenter.uninstallHook() : ApprovalCenter.installHook()
                         hookFailed = !ok
@@ -68,7 +69,7 @@ struct NotchAgentsSettingsControls: View {
                 if hookFailed { Text(sessionText(.hookFailed)).font(.caption).foregroundStyle(.orange) }
             }
             if claude || codex {
-                SettingsRow(symbol: "terminal", title: sessionText(.vscodeBridgeTitle), caption: sessionText(.vscodeBridgeHelp)) {
+                SettingsRow(symbol: "terminal", title: titles.vscodeBridgeTitle, caption: sessionText(.vscodeBridgeHelp)) {
                     Button(sessionText(.installVSCodeBridge)) {
                         installingVSCodeBridge = true
                         vscodeBridgeFailed = false

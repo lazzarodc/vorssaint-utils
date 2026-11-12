@@ -246,6 +246,7 @@ enum SettingsDirectory {
         let notchMusic = FeatureStrings.notchMusicExtras(language)
         let notchCalendar = FeatureStrings.notchCalendar(language)
         let notchAgents = FeatureStrings.notchAgents(language)
+        let sessionSettings = NotchAgentSessionSettingsStrings.localized(language)
         let notchLowBattery = NotchLowBatteryStrings.localized(language)
         var liquidGlass: [String] = []
 #if compiler(>=6.2)
@@ -290,6 +291,13 @@ enum SettingsDirectory {
             .init([notchAgents.readout], feature: .notchAgents, notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsLiveActivity)),
             .init([notchAgents.finishAfter], feature: .notchAgents, notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsFinishAlert)),
             .init([notchAgents.limitAt], feature: .notchAgents, notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsLimitAlert)),
+            .init([sessionSettings.soundsEnabled, sessionSettings.soundVolume, sessionSettings.sessionStartedSound,
+                   sessionSettings.taskCompletedSound, sessionSettings.taskAcknowledgedSound,
+                   sessionSettings.approvalNeededSound, sessionSettings.quietHours, sessionSettings.quietFrom,
+                   sessionSettings.quietUntil, sessionSettings.vscodeBridgeTitle],
+                  feature: .notchAgents, notch: .module(.agents)),
+            .init([sessionSettings.hookTitle], feature: .notchAgents,
+                  notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsClaude)),
             .init([FeatureStrings.claudeAccount(language).title], feature: .notchAgents,
                   notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsClaude)),
             .init([notchEditor.activity, notchEditor.resting, notch.coverMenus, notchEditor.feedback, notch.inputSource,
