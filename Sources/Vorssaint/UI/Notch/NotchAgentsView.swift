@@ -42,7 +42,8 @@ struct NotchAgentsView: View {
     }
     private var providers: [AgentProvider] {
         [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil]
-            .compactMap { $0 }.filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty) }
+            .compactMap { $0 }.filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty)
+                || ($0 == .claude && !usage.claudeProfile.isDefault) }
     }
     private var cards: [NotchAgentCard] { _ = (cardOrder, hiddenCards); return NotchAgentSupport.cards() }
     private var interactiveSessions: [AgentSession] {
@@ -53,7 +54,8 @@ struct NotchAgentsView: View {
     private var legacyProviders: [AgentProvider] { providers.filter { $0 == .opencode || $0 == .copilot } }
     private var limitTiles: [NotchAgentTile] {
         let visible = providers.filter { cards.contains(.limits) || ($0 == .codex && cards.contains(.resets)) }
-        return NotchAgentSupport.tiles(cards: [.limits], providers: visible, codexAccounts: codexAccounts.map(\.id))
+        return NotchAgentSupport.tiles(cards: [.limits], providers: visible, codexAccounts: codexAccounts.map(\.id),
+                                       claudeAccount: usage.claudeProfile.isDefault ? nil : usage.claudeProfile.id)
     }
     private var usageRows: [[NotchAgentTile]] {
         NotchAgentSupport.rows(NotchAgentSupport.tiles(cards: cards.filter { ![.limits, .live, .resets].contains($0) }, providers: providers), width: size.width)
@@ -162,7 +164,7 @@ struct NotchAgentsView: View {
     }
 
     private func summary(_ provider: AgentProvider, now: Date) -> some View {
-        let readings: [NotchAgentLimitReading] = provider == .codex && !codexAccounts.isEmpty
+        let readings: [NotchAgentAccountLimits] = provider == .codex && !codexAccounts.isEmpty
             ? codexAccounts.map { .init(name: $0.profile.name, limits: $0.currentLimits(at: now)) }
             : [.init(name: provider.displayName, limits: usage.snapshot.limits[provider])]
         let selected = NotchAgentSupport.sessionSummary(readings, now: now)
@@ -213,7 +215,8 @@ struct NotchAgentsView: View {
                                 VStack(alignment: .leading, spacing: 0) {
                                     NotchAgentLimitsCard(provider: provider, snapshot: usage.snapshot, now: now,
                                         display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text,
-                                        account: account(tile, now: now), showsLimits: cards.contains(.limits))
+                                        account: account(tile, now: now), showsLimits: cards.contains(.limits),
+                                        accountName: provider == .claude ? claudeAccountName : nil)
                                     if provider == .codex, cards.contains(.resets) {
                                         if let id = tile.accountID {
                                             if let state = codexAccounts.first(where: { $0.id == id }) {
@@ -280,6 +283,13 @@ struct NotchAgentsView: View {
         }
     }
     private func account(_ tile: NotchAgentTile, now: Date) -> NotchAgentAccount? {
+        if tile.provider == .claude, tile.accountID != nil {
+            let strings = FeatureStrings.codexAccounts(l10n.language)
+            return NotchAgentAccount(name: claudeAccountName, limits: usage.snapshot.limits[.claude],
+                plan: usage.snapshot.plans[.claude]?.name, checking: usage.claudeAccountChecking,
+                failure: usage.claudeAccountFailure.map(text.claudeCode), refreshHint: strings.refreshHint,
+                checkLabel: strings.check, refresh: usage.checkClaudeAccount)
+        }
         guard let id = tile.accountID, let state = codexAccounts.first(where: { $0.id == id }) else { return nil }
         let strings = FeatureStrings.codexAccounts(l10n.language)
         let failure = state.failure.map { failure -> String in
@@ -294,6 +304,12 @@ struct NotchAgentsView: View {
         return NotchAgentAccount(name: state.profile.name, limits: state.currentLimits(at: now), plan: state.plan,
                                  checking: state.checking, failure: failure, refreshHint: strings.refreshHint,
                                  checkLabel: strings.check) { accounts.refresh(id: id, force: true) }
+    }
+
+    private var claudeAccountName: String {
+        let name = usage.claudeProfile.name(defaultName: FeatureStrings.claudeAccount(l10n.language).defaultAccount)
+        guard let email = usage.claudeAccountIdentity?.email else { return name }
+        return usage.claudeProfile.isDefault ? email : name + " · " + email
     }
 }
 
@@ -314,7 +330,56 @@ private struct NotchAgentChip: View {
 
 // MARK: Limits
 
-/// An added Codex home's card: only its own checks, never the reading the
+/// The share keeps its meaning at every width. A reset countdown uses spare
+/// room, otherwise its full date remains in the row's tooltip.
+private struct NotchAgentLimitReading: View {
+    let title: String
+    let share: String
+    let countdown: String?
+    let tint: Color
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 5) {
+                heading.fixedSize()
+                if let countdown {
+                    Label(countdown, systemImage: "arrow.clockwise")
+                        .labelStyle(NotchAgentInlineLabel())
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                        .accessibilityIdentifier("notch.agentLimitCountdown")
+                }
+                Spacer(minLength: 2)
+                reading
+            }
+            HStack(spacing: 5) {
+                heading.minimumScaleFactor(0.8)
+                Spacer(minLength: 2)
+                reading
+            }
+        }
+    }
+
+    private var heading: some View {
+        Text(title)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(.white.opacity(0.85))
+            .lineLimit(1)
+    }
+
+    private var reading: some View {
+        Text(share)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(tint)
+            .fixedSize()
+            .contentTransition(.numericText())
+            .accessibilityIdentifier("notch.agentLimitShare")
+    }
+}
+
+/// An explicitly chosen account's card: only its own checks, never the reading the
 /// logs give the provider's other account, even when its check failed.
 private struct NotchAgentAccount {
     let name: String
@@ -335,6 +400,7 @@ private struct NotchAgentLimitsCard: View {
     let text: NotchAgentStrings
     var account: NotchAgentAccount? = nil
     var showsLimits = true
+    var accountName: String? = nil
     @Environment(\.locale) private var locale
 
     private var limits: AgentLimits? {
@@ -360,7 +426,7 @@ private struct NotchAgentLimitsCard: View {
         let windows = windows
         NotchAgentCardChrome {
             VStack(alignment: .leading, spacing: 6) {
-                NotchAgentCardHeader(title: account?.name ?? snapshot.plans[provider]?.name ?? "",
+                NotchAgentCardHeader(title: account?.name ?? accountName ?? snapshot.plans[provider]?.name ?? "",
                                      symbol: provider.symbol, tint: provider.tint, provider: provider) {
                     HStack(spacing: 4) {
                         if let account {
@@ -381,6 +447,7 @@ private struct NotchAgentLimitsCard: View {
                         }
                     }
                 }
+                .help(account?.name ?? accountName ?? provider.displayName)
                 if showsLimits {
                     if let account {
                         let notes = NotchAgentSupport.accountNotes(
@@ -430,29 +497,19 @@ private struct NotchAgentLimitsCard: View {
     }
 
     /// A usage-based forecast would read as a promise, so a row says only
-    /// what is spent and when the window renews.
+    /// what is left or used, as chosen, and when the window renews.
     private func row(_ window: AgentLimitWindow) -> some View {
         let pace = AgentLimitSupport.pace(for: window, now: now)
         let tint = agentLimitTint(provider, usedFraction: window.usedFraction)
         let remaining = display == .remaining
         let fraction = remaining ? window.remainingFraction : window.usedFraction
+        let reset = AgentLimitSupport.displayedReset(window, now: now).map {
+            (window.estimatedResetsAt == nil ? "" : "≈ ") + countdown(to: $0)
+        }
         return VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 5) {
-                Text(label(window))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                Spacer(minLength: 8)
-                Text(remaining ? text.left(AgentFormat.percent(fraction)) : text.usedShare(AgentFormat.percent(fraction)))
-                    .font(.system(size: 10, weight: .semibold)).monospacedDigit()
-                    .foregroundStyle(tint == provider.tint ? Color.white : tint).fixedSize()
-                if let resets = AgentLimitSupport.displayedReset(window, now: now) {
-                    Label((window.estimatedResetsAt == nil ? "" : "≈ ") + countdown(to: resets), systemImage: "arrow.clockwise")
-                        .labelStyle(NotchAgentInlineLabel()).font(.system(size: 9)).foregroundStyle(.secondary)
-                        .monospacedDigit().fixedSize().frame(minWidth: 65, alignment: .trailing)
-                }
-            }
+            NotchAgentLimitReading(title: label(window),
+                                  share: NotchAgentSupport.limitShare(window, display: display, text: text),
+                                  countdown: reset, tint: tint == provider.tint ? Color.white : tint)
             NotchAgentMeter(value: fraction, pace: pace.map { remaining ? 1 - $0.elapsed : $0.elapsed },
                             tint: tint, height: 4)
         }

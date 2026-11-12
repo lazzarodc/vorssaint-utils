@@ -56,14 +56,14 @@ struct NotchAgentTile: Identifiable, Equatable {
     let card: NotchAgentCard
     /// The account a limits card belongs to.
     let provider: AgentProvider?
-    /// An added Codex home's card; nil for the one the logs feed.
+    /// An explicitly chosen account's card; nil for the default reading.
     var accountID: String? = nil
     /// The Resets card beside added Codex homes, which says whose resets they are.
     var namesDefaultAccount = false
     var id: String { card.rawValue + (provider.map { "." + $0.rawValue } ?? "") + (accountID.map { "." + $0 } ?? "") }
 }
 
-struct NotchAgentLimitReading {
+struct NotchAgentAccountLimits {
     let name: String
     let limits: AgentLimits?
 }
@@ -76,7 +76,7 @@ struct NotchAgentSessionLimit {
 
 enum NotchAgentSupport {
     /// The most constrained reported session across the accounts shown in Limits.
-    static func sessionSummary(_ readings: [NotchAgentLimitReading], now: Date) -> NotchAgentSessionLimit? {
+    static func sessionSummary(_ readings: [NotchAgentAccountLimits], now: Date) -> NotchAgentSessionLimit? {
         readings.compactMap { reading -> NotchAgentSessionLimit? in
             guard let limits = reading.limits,
                   let reported = limits.windows.first(where: { $0.kind == .session && $0.scope == nil }) else { return nil }
@@ -263,6 +263,36 @@ enum NotchAgentSupport {
         }
     }
 
+    /// Settings must illustrate the selected reading even before any agent
+    /// has reported an allowance. Example data stays in this preview copy.
+    static func stripSampleSnapshot(_ snapshot: AgentUsageSnapshot, provider: AgentProvider,
+                                    focus: NotchAgentLimitFocus, now: Date) -> AgentUsageSnapshot {
+        var sample = snapshot
+        if sample.live.isEmpty {
+            sample.live = [AgentLiveSession(id: "example", provider: provider, started: now.addingTimeInterval(-754),
+                                            lastActivity: now, model: "", project: "",
+                                            tokens: AgentTokens(input: 1_180_000, output: 20_000), cost: 4.56)]
+        }
+        let working = AgentProvider.allCases.first { provider in sample.live.contains { $0.provider == provider } } ?? provider
+        if focusedLimit(sample.limits[working], focus: focus, now: now) == nil {
+            sample.limits[working] = AgentLimits(provider: working, windows: [
+                AgentLimitWindow(id: "example-session", kind: .session, minutes: 300, scope: nil,
+                                 usedPercent: 32, resetsAt: now.addingTimeInterval(3600)),
+                AgentLimitWindow(id: "example-week", kind: .weekly, minutes: 10_080, scope: nil,
+                                 usedPercent: 57, resetsAt: now.addingTimeInterval(86_400))
+            ], observedAt: now, source: .sessionLog)
+        }
+        return sample
+    }
+
+    /// A limit's share on the island's card. It names which share it is:
+    /// a bare 99% left reads as 99% spent.
+    static func limitShare(_ window: AgentLimitWindow, display: NotchAgentLimitDisplay,
+                           text: NotchAgentStrings) -> String {
+        display == .remaining ? text.left(AgentFormat.percent(window.remainingFraction))
+            : text.usedShare(AgentFormat.percent(window.usedFraction))
+    }
+
     /// Every digit takes the same width, so a reading's shape, not its value,
     /// sets the strip's width: "12:34" and "59:59" match, "1:00:00" is wider.
     static func readingShape(_ reading: String) -> String {
@@ -285,10 +315,13 @@ enum NotchAgentSupport {
     /// Codex homes the person added take the place of Codex's one limits
     /// card, the usual home among them when they add it.
     static func tiles(cards: [NotchAgentCard], providers: [AgentProvider],
-                      codexAccounts: [String] = []) -> [NotchAgentTile] {
+                      codexAccounts: [String] = [], claudeAccount: String? = nil) -> [NotchAgentTile] {
         cards.flatMap { card -> [NotchAgentTile] in
             switch card {
             case .limits: return providers.filter(\.reportsLimits).flatMap { provider -> [NotchAgentTile] in
+                if provider == .claude, let claudeAccount {
+                    return [NotchAgentTile(card: .limits, provider: provider, accountID: claudeAccount)]
+                }
                 guard provider == .codex, !codexAccounts.isEmpty else { return [NotchAgentTile(card: .limits, provider: provider)] }
                 return codexAccounts.map { NotchAgentTile(card: .limits, provider: provider, accountID: $0) }
             }
@@ -326,14 +359,18 @@ enum NotchAgentSupport {
     /// Keep the person's card order while giving process sessions a full-width
     /// slot. The usage-only live card remains available for OpenCode/Copilot.
     static func rowsAroundSessions(cards: [NotchAgentCard], providers: [AgentProvider],
-                                   codexAccounts: [String], width: CGFloat) -> (before: [[NotchAgentTile]], after: [[NotchAgentTile]]) {
+                                   codexAccounts: [String], claudeAccount: String? = nil,
+                                   width: CGFloat) -> (before: [[NotchAgentTile]], after: [[NotchAgentTile]]) {
         guard let live = cards.firstIndex(of: .live) else {
-            return (rows(tiles(cards: cards, providers: providers, codexAccounts: codexAccounts), width: width), [])
+            return (rows(tiles(cards: cards, providers: providers, codexAccounts: codexAccounts,
+                               claudeAccount: claudeAccount), width: width), [])
         }
         let before = Array(cards[..<live])
         let after = Array(cards[cards.index(after: live)...])
-        return (rows(tiles(cards: before, providers: providers, codexAccounts: codexAccounts), width: width),
-                rows(tiles(cards: after, providers: providers, codexAccounts: codexAccounts), width: width))
+        return (rows(tiles(cards: before, providers: providers, codexAccounts: codexAccounts,
+                           claudeAccount: claudeAccount), width: width),
+                rows(tiles(cards: after, providers: providers, codexAccounts: codexAccounts,
+                           claudeAccount: claudeAccount), width: width))
     }
 
     static func height(of row: [NotchAgentTile]) -> CGFloat {
